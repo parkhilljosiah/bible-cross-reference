@@ -1,0 +1,225 @@
+# Curated intertextual links: a starter set, NOT an authoritative or exhaustive list.
+#
+# Format:  later text | earlier text | type | note
+#   type: quotation  – close verbal citation of the earlier text
+#         allusion   – clear, deliberate reference to its imagery or wording
+#         echo       – thematic or verbal resonance; weaker, more debatable
+#   refs: Book.chapter.verse or Book.chapter.verse-verse (same chapter), or Book.c.v-Book.c.v
+#   Links are anchored at the first verse of each range.
+#
+# Parallels follow commonly cited lists (e.g. the NA28 margin, Beale & Carson's Commentary on the
+# New Testament Use of the Old Testament). Classifications are editorial judgments and should be
+# reviewed against those sources before publication.
+
+# ---- Revelation: Daniel ----
+Rev.1.1 | Dan.2.28-29 | allusion | "what must soon take place"
+Rev.1.7 | Dan.7.13 | allusion | Coming with the clouds
+Rev.1.13 | Dan.7.13 | allusion | "one like a son of man"
+Rev.1.14 | Dan.7.9 | allusion | White hair like wool
+Rev.1.14-15 | Dan.10.5-6 | allusion | Fiery eyes, burnished bronze feet
+Rev.5.11 | Dan.7.10 | allusion | Myriads of myriads before the throne
+Rev.10.4 | Dan.12.4 | allusion | Seal up what was heard
+Rev.10.5-6 | Dan.12.7 | allusion | Oath by the one who lives forever
+Rev.11.2 | Dan.7.25 | allusion | Forty-two months, "time, times and half a time"
+Rev.11.7 | Dan.7.3 | allusion | The beast rising to make war on the saints
+Rev.11.15 | Dan.7.14 | allusion | Dominion given to the one like a son of man
+Rev.12.3 | Dan.7.7 | allusion | Beast with ten horns
+Rev.12.7 | Dan.10.13 | allusion | Michael the archangel
+Rev.12.14 | Dan.7.25 | allusion | A time, times and half a time
+Rev.13.1-2 | Dan.7.3-6 | allusion | Composite beast: leopard, bear, lion
+Rev.13.5-7 | Dan.7.8 | allusion | Mouth speaking great things; war on the saints
+Rev.13.14-15 | Dan.3.1-6 | echo | Image to be worshiped on pain of death
+Rev.13.8 | Dan.12.1 | echo | Book of life
+Rev.14.14 | Dan.7.13 | allusion | One like a son of man on a cloud
+Rev.17.12 | Dan.7.20 | allusion | Ten horns are ten kings
+Rev.19.20 | Dan.7.11 | allusion | Beast destroyed and thrown into fire
+Rev.20.4 | Dan.7.22 | allusion | Judgment given to the saints
+Rev.20.11-12 | Dan.7.9-10 | allusion | Throne, books opened
+Rev.7.14 | Dan.12.1 | allusion | A time of great tribulation
+
+# ---- Revelation: Ezekiel ----
+Rev.1.15 | Ezek.43.2 | allusion | Voice like many waters
+Rev.4.2-3 | Ezek.1.26-28 | allusion | Throne, rainbow, glowing appearance
+Rev.4.5 | Ezek.1.13 | echo | Lightning and fire at the throne
+Rev.4.6-8 | Ezek.1.5-10 | allusion | Four living creatures, many eyes
+Rev.5.1 | Ezek.2.9-10 | allusion | Scroll written on front and back
+Rev.6.8 | Ezek.14.21 | allusion | Sword, famine, wild beasts, plague
+Rev.7.3 | Ezek.9.4 | allusion | Mark on the foreheads of the faithful
+Rev.9.4 | Ezek.9.4 | echo | Only those without the mark are harmed
+Rev.10.9-10 | Ezek.3.1-3 | allusion | Eating the scroll, sweet as honey
+Rev.11.1 | Ezek.40.3 | allusion | Measuring the temple with a reed
+Rev.11.11 | Ezek.37.10 | allusion | Breath of life enters the dead
+Rev.17.1 | Ezek.16.15 | echo | The great prostitute
+Rev.18.9 | Ezek.26.16 | allusion | Kings mourn the fallen city
+Rev.18.11-19 | Ezek.27.1-36 | allusion | Merchants' lament over Tyre
+Rev.19.17-18 | Ezek.39.17-20 | allusion | Birds summoned to feast on the slain
+Rev.19.6 | Ezek.1.24 | echo | Sound like many waters
+Rev.20.8 | Ezek.38.2 | allusion | Gog and Magog
+Rev.20.9 | Ezek.38.22 | echo | Fire from heaven
+Rev.21.3 | Ezek.37.27 | allusion | "my dwelling place will be with them"
+Rev.21.10 | Ezek.40.2 | allusion | Carried to a high mountain; city vision
+Rev.21.12-13 | Ezek.48.30-35 | allusion | Gates named for the tribes
+Rev.21.15 | Ezek.40.3 | allusion | Angel with measuring rod
+Rev.22.1 | Ezek.47.1 | allusion | River flowing from the sanctuary
+Rev.22.2 | Ezek.47.12 | allusion | Trees whose leaves heal
+Rev.4.7 | Ezek.1.10 | allusion | Faces of lion, ox, man, eagle
+
+# ---- Revelation: Isaiah ----
+Rev.1.17 | Isa.44.6 | allusion | "the first and the last"
+Rev.3.7 | Isa.22.22 | allusion | Key of David
+Rev.3.9 | Isa.45.14 | allusion | They will bow down at your feet
+Rev.3.12 | Isa.62.2 | allusion | A new name
+Rev.4.8 | Isa.6.3 | quotation | "Holy, holy, holy"
+Rev.5.5 | Isa.11.1 | allusion | Root of Jesse
+Rev.5.6 | Isa.53.7 | allusion | Lamb as slain
+Rev.6.12-13 | Isa.34.4 | allusion | Heavens rolled up, stars falling
+Rev.6.15-16 | Isa.2.19 | allusion | Hiding in caves from the Lord's majesty
+Rev.7.16 | Isa.49.10 | quotation | No more hunger or thirst
+Rev.7.17 | Isa.25.8 | allusion | God wipes away every tear
+Rev.12.5 | Isa.66.7 | allusion | Birth of the male child
+Rev.14.8 | Isa.21.9 | quotation | "Fallen, fallen is Babylon"
+Rev.18.2 | Isa.21.9 | quotation | "Fallen, fallen is Babylon the great"
+Rev.18.7 | Isa.47.7-9 | allusion | "I sit as queen, I am no widow"
+Rev.19.11 | Isa.11.4 | allusion | Righteous judgment and war
+Rev.19.15 | Isa.63.3 | allusion | Treading the winepress
+Rev.20.1-3 | Isa.24.21-22 | echo | Powers bound and confined
+Rev.21.1 | Isa.65.17 | allusion | New heaven and new earth
+Rev.21.4 | Isa.25.8 | allusion | Death swallowed up; tears wiped away
+Rev.21.5 | Isa.43.19 | echo | "I am making all things new"
+Rev.21.6 | Isa.55.1 | allusion | Water of life without cost
+Rev.21.18-21 | Isa.54.11-12 | allusion | City adorned with precious stones
+Rev.21.23 | Isa.60.19 | allusion | No need of sun or moon
+Rev.21.24-26 | Isa.60.3-5 | allusion | Nations and kings bring their glory
+Rev.22.5 | Isa.60.19-20 | allusion | The Lord is the everlasting light
+Rev.22.12 | Isa.40.10 | allusion | Reward comes with him
+Rev.22.16 | Isa.11.10 | allusion | Root and descendant of David
+Rev.22.17 | Isa.55.1 | allusion | Come, take the water of life
+
+# ---- Revelation: Psalms, Zechariah, Exodus, and others ----
+Rev.1.5-6 | Exod.19.6 | allusion | Kingdom of priests
+Rev.5.10 | Exod.19.6 | allusion | A kingdom and priests
+Rev.1.7 | Zech.12.10 | quotation | "they will look on the one they have pierced"
+Rev.2.27 | Ps.2.9 | quotation | Rule with an iron scepter
+Rev.12.5 | Ps.2.9 | quotation | Child to rule the nations with an iron scepter
+Rev.19.15 | Ps.2.9 | allusion | Rules with an iron scepter
+Rev.11.18 | Ps.2.1 | echo | The nations were angry
+Rev.2.23 | Jer.17.10 | allusion | Searcher of hearts and minds
+Rev.2.7 | Gen.2.9 | allusion | Tree of life
+Rev.22.2 | Gen.2.9 | allusion | Tree of life in the new creation
+Rev.12.9 | Gen.3.1 | allusion | The ancient serpent
+Rev.12.1 | Gen.37.9 | echo | Sun, moon and stars
+Rev.5.5 | Gen.49.9 | allusion | Lion of the tribe of Judah
+Rev.5.6 | Zech.4.10 | allusion | Seven eyes
+Rev.11.4 | Zech.4.3 | allusion | Two olive trees and two lampstands
+Rev.6.1-8 | Zech.6.1-8 | echo | Colored horses
+Rev.16.16 | Zech.12.11 | echo | Megiddo
+Rev.22.3 | Zech.14.11 | allusion | No more curse
+Rev.22.1 | Zech.14.8 | echo | Living water flowing out
+Rev.6.16 | Hos.10.8 | quotation | "Fall on us and hide us"
+Rev.9.3-11 | Joel.2.4-10 | allusion | Locust army
+Rev.14.15 | Joel.3.13 | allusion | Sickle for the harvest
+Rev.6.12 | Joel.2.31 | allusion | Sun darkened, moon like blood
+Rev.15.3 | Exod.15.1 | allusion | Song of Moses
+Rev.16.2 | Exod.9.9-11 | allusion | Sores plague
+Rev.16.3-4 | Exod.7.17-21 | allusion | Water to blood
+Rev.16.10 | Exod.10.21-23 | allusion | Darkness plague
+Rev.16.21 | Exod.9.23-24 | allusion | Hail
+Rev.15.8 | Isa.6.4 | echo | Temple filled with smoke
+Rev.18.4 | Jer.51.45 | allusion | "Come out of her, my people"
+Rev.18.21 | Jer.51.63-64 | allusion | Millstone cast into the sea
+Rev.19.2 | Deut.32.43 | allusion | He avenges the blood of his servants
+Rev.12.14 | Exod.19.4 | allusion | Eagle's wings
+Rev.11.5-6 | 2Kgs.1.10 | allusion | Fire from the mouth of the witnesses
+Rev.11.6 | 1Kgs.17.1 | allusion | Power to shut the sky
+Rev.13.13 | 1Kgs.18.38 | echo | Fire from heaven
+Rev.21.7 | 2Sam.7.14 | allusion | "I will be his God, and he will be my son"
+Rev.14.10 | Ps.75.8 | allusion | Cup of the wine of God's wrath
+Rev.20.12 | Ps.62.12 | allusion | Judged according to what they had done
+
+# ---- Matthew ----
+Matt.1.23 | Isa.7.14 | quotation | The virgin will conceive
+Matt.2.6 | Mic.5.2 | quotation | Bethlehem of Judah
+Matt.2.15 | Hos.11.1 | quotation | "Out of Egypt I called my son"
+Matt.2.18 | Jer.31.15 | quotation | Rachel weeping
+Matt.3.3 | Isa.40.3 | quotation | Voice crying in the wilderness
+Matt.4.4 | Deut.8.3 | quotation | Not by bread alone
+Matt.4.6 | Ps.91.11-12 | quotation | Angels will bear you up
+Matt.4.7 | Deut.6.16 | quotation | Do not test the Lord
+Matt.4.10 | Deut.6.13 | quotation | Worship the Lord alone
+Matt.4.15-16 | Isa.9.1-2 | quotation | People in darkness see a great light
+Matt.8.17 | Isa.53.4 | quotation | He took our infirmities
+Matt.12.18-21 | Isa.42.1-4 | quotation | Servant in whom I delight
+Matt.13.14-15 | Isa.6.9-10 | quotation | Hearing but not understanding
+Matt.21.5 | Zech.9.9 | quotation | Your king comes riding on a donkey
+Matt.21.9 | Ps.118.25-26 | quotation | Hosanna; blessed is he who comes
+Matt.21.13 | Isa.56.7 | quotation | House of prayer
+Matt.21.42 | Ps.118.22-23 | quotation | The stone the builders rejected
+Matt.22.44 | Ps.110.1 | quotation | "Sit at my right hand"
+Matt.26.31 | Zech.13.7 | quotation | Strike the shepherd
+Matt.27.35 | Ps.22.18 | allusion | Casting lots for his garments
+Matt.27.46 | Ps.22.1 | quotation | "My God, my God, why have you forsaken me?"
+Matt.27.9-10 | Zech.11.12-13 | quotation | Thirty pieces of silver
+
+# ---- Mark, Luke, John, Acts ----
+Mark.1.2-3 | Mal.3.1 | quotation | Messenger sent ahead
+Luke.4.18-19 | Isa.61.1-2 | quotation | The Spirit of the Lord is on me
+John.1.23 | Isa.40.3 | quotation | Voice crying in the wilderness
+John.2.17 | Ps.69.9 | quotation | Zeal for your house
+John.6.31 | Ps.78.24 | quotation | Bread from heaven
+John.10.34 | Ps.82.6 | quotation | "You are gods"
+John.12.38 | Isa.53.1 | quotation | Who has believed our message
+John.19.36 | Exod.12.46 | allusion | Not a bone broken
+John.19.37 | Zech.12.10 | quotation | They will look on the one they pierced
+Acts.2.17-21 | Joel.2.28-32 | quotation | Pentecost: Spirit poured out
+Acts.2.25-28 | Ps.16.8-11 | quotation | You will not abandon me to the grave
+Acts.2.34-35 | Ps.110.1 | quotation | "Sit at my right hand"
+Acts.4.25-26 | Ps.2.1-2 | quotation | Why do the nations rage
+Acts.8.32-33 | Isa.53.7-8 | quotation | Led like a sheep to the slaughter
+Acts.13.33 | Ps.2.7 | quotation | "You are my son"
+Acts.15.16-17 | Amos.9.11-12 | quotation | David's fallen tent restored
+
+# ---- Paul ----
+Rom.1.17 | Hab.2.4 | quotation | The righteous shall live by faith
+Rom.4.3 | Gen.15.6 | quotation | Abraham believed God
+Rom.9.13 | Mal.1.2-3 | quotation | Jacob I loved, Esau I hated
+Rom.9.25 | Hos.2.23 | quotation | Not my people, my people
+Rom.10.13 | Joel.2.32 | quotation | Everyone who calls on the name of the Lord
+Rom.10.15 | Isa.52.7 | quotation | How beautiful are the feet
+Rom.11.26-27 | Isa.59.20-21 | quotation | The deliverer will come from Zion
+Rom.15.12 | Isa.11.10 | quotation | The Root of Jesse
+1Cor.15.54-55 | Isa.25.8 | quotation | Death is swallowed up
+1Cor.15.55 | Hos.13.14 | quotation | Where, O death, is your victory
+1Cor.15.45 | Gen.2.7 | quotation | The first man Adam became a living being
+2Cor.6.16 | Lev.26.12 | quotation | "I will live with them"
+Gal.3.6 | Gen.15.6 | quotation | Abraham believed God
+Gal.3.11 | Hab.2.4 | quotation | The righteous shall live by faith
+Gal.3.16 | Gen.12.7 | allusion | "to your seed"
+Eph.4.8 | Ps.68.18 | quotation | He ascended on high
+Eph.5.31 | Gen.2.24 | quotation | The two become one flesh
+
+# ---- Hebrews and the general epistles ----
+Heb.1.5 | Ps.2.7 | quotation | "You are my son"
+Heb.1.5 | 2Sam.7.14 | quotation | "I will be his father"
+Heb.1.8-9 | Ps.45.6-7 | quotation | Your throne, O God, is forever
+Heb.1.10-12 | Ps.102.25-27 | quotation | In the beginning you laid the foundations
+Heb.1.13 | Ps.110.1 | quotation | "Sit at my right hand"
+Heb.2.6-8 | Ps.8.4-6 | quotation | What is man that you are mindful of him
+Heb.3.7-11 | Ps.95.7-11 | quotation | Do not harden your hearts
+Heb.5.6 | Ps.110.4 | quotation | A priest forever, in the order of Melchizedek
+Heb.7.1-2 | Gen.14.17-20 | allusion | Melchizedek and Abraham
+Heb.8.8-12 | Jer.31.31-34 | quotation | The new covenant
+Heb.9.20 | Exod.24.8 | quotation | Blood of the covenant
+Heb.10.5-7 | Ps.40.6-8 | quotation | A body you prepared for me
+Heb.10.37-38 | Hab.2.3-4 | quotation | The righteous shall live by faith
+Heb.12.5-6 | Prov.3.11-12 | quotation | The Lord disciplines those he loves
+Heb.12.26 | Hag.2.6 | quotation | Once more I will shake the heavens
+Heb.13.5 | Deut.31.6 | quotation | "I will never leave you"
+Heb.13.6 | Ps.118.6 | quotation | The Lord is my helper
+Jas.2.23 | Gen.15.6 | quotation | Abraham believed God
+Jas.4.6 | Prov.3.34 | quotation | God opposes the proud
+1Pet.1.16 | Lev.19.2 | quotation | Be holy, for I am holy
+1Pet.1.24-25 | Isa.40.6-8 | quotation | All flesh is grass
+1Pet.2.6 | Isa.28.16 | quotation | A cornerstone in Zion
+1Pet.2.7 | Ps.118.22 | quotation | The stone the builders rejected
+1Pet.2.9 | Exod.19.5-6 | allusion | A royal priesthood, a holy nation
+1Pet.2.22 | Isa.53.9 | quotation | He committed no sin

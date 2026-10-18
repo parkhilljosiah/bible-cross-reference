@@ -1,0 +1,52 @@
+:root {
+  color-scheme: dark;
+  --bg: #07080c;
+  --panel: #0e1118;
+  --line: #222836;
+  --text: #e6e9f0;
+  --muted: #8a93a8;
+  --accent: #7aa2ff;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+html,
+body {
+  background: var(--bg);
+  /* No rubber-banding that reveals a blank page behind the app. */
+  overscroll-behavior: none;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--accent);
+}
