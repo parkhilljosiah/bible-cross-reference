@@ -27,9 +27,9 @@ There are **no automated tests**. Verify changes with `npx tsc -b`, `npm run lin
 | `raster.worker.ts`, `rasterClient.ts` | Runs the rasterizer in a Web Worker; newer requests replace queued ones; one client per layer |
 | `ArcCanvas.tsx` | Gestures (pinch/wheel/drag-pan/scrub), committed vs in-flight view, book strip, density bars, overlay |
 | `Controls.tsx` | Header: book pickers, min votes, curated toggle, zoom-to-books, Reset all, Share link |
-| `Sidebar.tsx` | Selection panel; on phones a draggable bottom sheet, or the "Top connected books" list when nothing is pinned |
+| `Sidebar.tsx` | Selection panel with translation pickers and passage text; on phones a draggable bottom sheet, or the "Top connected books" list when nothing is pinned |
 | `BookChips.tsx` | Phone-only scrolling row of tappable books |
-| `urlState.ts` | Query string <-> state (`between`, `and`, `votes`, `zoom`, `src`, `sel`); App keeps the address bar in sync |
+| `urlState.ts` | Query string <-> state (`between`, `and`, `votes`, `zoom`, `src`, `sel`, `tr`, `cmp`); App keeps the address bar in sync |
 | `useMediaQuery.ts` | `MOBILE_QUERY` is `(max-width: 860px)` |
 
 Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `votes[i]` and `kind[i]`
@@ -38,15 +38,21 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
 
 ## Data pipeline
 
-- `public/data/` (books.json, refs.bin, curated.json, kjv.json) is **generated and committed**, so CI and hosting need
-  no downloads. `data/raw/` is git-ignored: `cross_references.txt` from OpenBible.info and `en_kjv.json` from
-  thiagobodruk/bible (see README for URLs).
+- `public/data/` (books.json, refs.bin, curated.json, translations.json, text/<ID>/<Book>.json) is **generated and
+  committed**, so CI and hosting need no downloads (about 31 MB, most of it text). `bash scripts/fetch-raw.sh`
+  downloads the sources into the git-ignored `data/raw/`; then `node scripts/build-data.mjs`.
+- **Translations** come from scrollmapper/bible_databases (`formats/json/<ID>.json`): KJV, BSB, NHEB, ASV, YLT, Darby,
+  Webster. Each is re-keyed to the KJV book/chapter/verse layout and written one file per book, fetched lazily when a
+  passage is opened (`loadVerses` in `data.ts`). Verses a translation omits are stored as `''` and the UI says so.
+  The KJV's small-caps LORD is restored from the older `en_kjv.json` (the scrollmapper KJV flattens it to "Lord").
+  **OEB is unusable** (most verses empty in that dataset). WEB itself isn't in that repository; NHEB stands in.
+  Selected translation lives in the URL (`tr`, `cmp`) and localStorage (`translation`).
 - `data/curated/allusions.txt`: `later | earlier | type | note`, one link per line. The build script fails loudly on a
   bad reference. Re-run `node scripts/build-data.mjs` after editing.
 - The curated list is a **starter set (~200 links) written by Claude from commonly cited parallels**. The type labels
   are editorial judgments and **need expert review before being presented as scholarship**.
-- **Unverified:** the license of the specific `en_kjv.json` file. The KJV is public domain, but confirm the file's
-  license or swap the source before promoting the site.
+- **Unverified:** per-text licensing. The translations are public domain by their own history, but the source
+  repository states no per-translation license (and `en_kjv.json` none either). Confirm before promoting the site.
 
 ## Decisions and why (don't undo without a reason)
 

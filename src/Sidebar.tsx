@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { GENRE_COLORS, KIND_COLORS, loadText, rangeLabel, verseLabel, type Data } from './data'
+import { GENRE_COLORS, KIND_COLORS, loadVerses, rangeLabel, verseLabel, type Data } from './data'
 import { linksTouching, type FilterContext, type Selection } from './graph'
 
 interface Props {
@@ -10,12 +10,17 @@ interface Props {
   onCompare: (selectionBooks: number[], other: number) => void
   onClear: () => void
   onPin: (sel: Selection) => void
+  translation: string
+  /** A second translation shown beneath the first, or null. */
+  compareTranslation: string | null
+  onTranslations: (primary: string, compare: string | null) => void
 }
 
 const PAGE = 30
 
-export default function Sidebar({ data, ctx, pinned, onCompare, onClear, onPin }: Props) {
-  const [text, setText] = useState<string[] | null>(null)
+export default function Sidebar({
+  data, ctx, pinned, onCompare, onClear, onPin, translation, compareTranslation, onTranslations,
+}: Props) {
   const [open, setOpen] = useState<number | null>(null)
   const [limit, setLimit] = useState(PAGE)
   // Only used by the mobile bottom sheet.
@@ -62,9 +67,6 @@ export default function Sidebar({ data, ctx, pinned, onCompare, onClear, onPin }
     },
   }
 
-  useEffect(() => {
-    if (open !== null && !text) loadText().then(setText)
-  }, [open, text])
 
   const detail = useMemo(() => {
     if (!pinned) return null
@@ -146,6 +148,12 @@ export default function Sidebar({ data, ctx, pinned, onCompare, onClear, onPin }
             Use <strong>Between</strong> and <strong>And</strong> to compare books, such as <em>Revelation</em> with <em>Daniel</em> and <em>Ezekiel</em>.
           </li>
         </ul>
+        <TranslationBar
+          data={data}
+          translation={translation}
+          compareTranslation={compareTranslation}
+          onChange={onTranslations}
+        />
         <Legend />
         <KindLegend />
         <Credits />
@@ -180,6 +188,12 @@ export default function Sidebar({ data, ctx, pinned, onCompare, onClear, onPin }
         </button>
       </div>
       <p className="muted">{total.toLocaleString()} links match the current filters.</p>
+      <TranslationBar
+        data={data}
+        translation={translation}
+        compareTranslation={compareTranslation}
+        onChange={onTranslations}
+      />
 
       {top.length > 0 && (
         <section>
@@ -236,10 +250,15 @@ export default function Sidebar({ data, ctx, pinned, onCompare, onClear, onPin }
                   <div className="passages">
                     {info && info.note && <p className="note">{info.note}</p>}
                     {(ranges ?? [[here, here], [there, there]] as const).map(([lo, hi]) => (
-                      <p key={lo}>
-                        <b>{rangeLabel(data, lo, hi)}</b>{' '}
-                        {text ? text.slice(lo, Math.min(hi, lo + 5) + 1).join(' ') + (hi > lo + 5 ? ' …' : '') : 'Loading…'}
-                      </p>
+                      <div key={lo} className="passage">
+                        <b>{rangeLabel(data, lo, hi)}</b>
+                        {([translation, compareTranslation].filter(Boolean) as string[]).map((tid, _i, all) => (
+                          <p key={tid}>
+                            {all.length > 1 && <span className="tr-tag">{tid}</span>}
+                            <PassageText key={`${tid}-${lo}-${hi}`} data={data} tid={tid} lo={lo} hi={hi} />
+                          </p>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -274,6 +293,82 @@ function Legend() {
   )
 }
 
+/** Loads and shows the first few verses of a range in one translation. Remounted when its inputs change. */
+function PassageText({ data, tid, lo, hi }: { data: Data; tid: string; lo: number; hi: number }) {
+  const [verses, setVerses] = useState<string[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let live = true
+    loadVerses(data, tid, lo, hi).then(
+      (v) => live && setVerses(v),
+      () => live && setFailed(true),
+    )
+    return () => {
+      live = false
+    }
+  }, [data, tid, lo, hi])
+
+  if (failed) return <span className="muted">Couldn’t load this text. Check your connection and reopen the link.</span>
+  if (!verses) return <span className="muted">Loading…</span>
+  const shown = verses.slice(0, 6).filter(Boolean)
+  // Critical-text translations leave out a few verses (e.g. Matthew 17:21) that the KJV includes.
+  if (shown.length === 0) return <span className="muted">Not in this translation’s base text.</span>
+  return (
+    <>
+      {shown.join(' ')}
+      {verses.length > 6 ? ' …' : ''}
+    </>
+  )
+}
+
+function TranslationBar({
+  data,
+  translation,
+  compareTranslation,
+  onChange,
+}: {
+  data: Data
+  translation: string
+  compareTranslation: string | null
+  onChange: (primary: string, compare: string | null) => void
+}) {
+  const label = (t: { id: string; name: string; year: string }) => `${t.name}${t.year ? ` (${t.year})` : ''}`
+  return (
+    <div className="translation-bar">
+      <label>
+        <span>Translation</span>
+        <select
+          value={translation}
+          onChange={(e) => {
+            const next = e.target.value
+            onChange(next, compareTranslation === next ? null : compareTranslation)
+          }}
+        >
+          {data.translations.map((t) => (
+            <option key={t.id} value={t.id}>
+              {label(t)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>Compare with</span>
+        <select value={compareTranslation ?? ''} onChange={(e) => onChange(translation, e.target.value || null)}>
+          <option value="">None</option>
+          {data.translations
+            .filter((t) => t.id !== translation)
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {label(t)}
+              </option>
+            ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
 function KindLegend() {
   return (
     <section>
@@ -294,8 +389,8 @@ function Credits() {
   return (
     <p className="credits">
       Cross-references from <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a> (CC-BY).
-      Curated allusions are an editorial starter set. Text: King James Version. Inspired by Chris Harrison and
-      Christoph Römhild’s arc diagram.
+      Curated allusions are an editorial starter set. Bible texts are public-domain translations (see the README for
+      sources). Inspired by Chris Harrison and Christoph Römhild’s arc diagram.
     </p>
   )
 }

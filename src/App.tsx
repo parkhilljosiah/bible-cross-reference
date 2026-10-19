@@ -4,7 +4,7 @@ import BookChips from './BookChips'
 import Controls from './Controls'
 import Sidebar from './Sidebar'
 import { loadData, type Data } from './data'
-import { readState, writeState } from './urlState'
+import { DEFAULT_TRANSLATION, readState, writeState } from './urlState'
 import { buildContext, DEFAULT_FILTERS, type Filters, type Selection } from './graph'
 import { MOBILE_QUERY, useMediaQuery } from './useMediaQuery'
 import './App.css'
@@ -14,6 +14,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [pinned, setPinned] = useState<Selection | null>(null)
+  const [translation, setTranslation] = useState(DEFAULT_TRANSLATION)
+  const [compare, setCompare] = useState<string | null>(null)
   const mobile = useMediaQuery(MOBILE_QUERY)
 
   useEffect(() => {
@@ -25,6 +27,16 @@ export default function App() {
         if (shared) {
           setFilters(shared.filters)
           setPinned(shared.pinned)
+          setTranslation(shared.translation)
+          setCompare(shared.compare)
+        } else {
+          // No translation in the link: use the one this reader chose last time.
+          try {
+            const saved = window.localStorage.getItem('translation')
+            if (saved && d.translations.some((t) => t.id === saved)) setTranslation(saved)
+          } catch {
+            /* storage unavailable (private mode): keep the default */
+          }
         }
       },
       (e) => setError(String(e)),
@@ -35,8 +47,9 @@ export default function App() {
   useEffect(() => {
     if (!data) return
     const { pathname, hash } = window.location
-    window.history.replaceState(null, '', `${pathname}${writeState(data, { filters, pinned })}${hash}`)
-  }, [data, filters, pinned])
+    const state = { filters, pinned, translation, compare }
+    window.history.replaceState(null, '', `${pathname}${writeState(data, state)}${hash}`)
+  }, [data, filters, pinned, translation, compare])
 
   // Keeps the slider responsive while a 300k-link redraw catches up.
   const deferred = useDeferredValue(filters)
@@ -58,6 +71,17 @@ export default function App() {
           pinned={pinned}
           onClear={() => setPinned(null)}
           onPin={setPinned}
+          translation={translation}
+          compareTranslation={compare}
+          onTranslations={(primary, second) => {
+            setTranslation(primary)
+            setCompare(second)
+            try {
+              window.localStorage.setItem('translation', primary)
+            } catch {
+              /* storage unavailable: the choice just won't be remembered */
+            }
+          }}
           onCompare={(books, other) => {
             setFilters((f) => ({ ...f, between: books, and: [other], zoom: true }))
           }}

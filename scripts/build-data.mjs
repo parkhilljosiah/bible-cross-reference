@@ -1,8 +1,10 @@
 // Builds compact app data from data/raw into public/data.
 //   books.json  – book metadata + per-chapter verse counts
 //   refs.bin    – little-endian records of (from:u16, to:u16, votes:i16); u16 = global verse index
-//   kjv.json    – verse text, indexed by global verse index
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+//   curated.json – details for hand-curated links
+//   translations.json – manifest of the bundled public-domain translations
+//   text/<ID>/<Book>.json – one array of verse strings per book, aligned to the KJV chapter/verse layout
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 
 // [OpenBible abbreviation, display name, genre]
 const BOOKS = [
@@ -33,21 +35,42 @@ const BOOKS = [
   ['3John', '3 John', 'Epistles'], ['Jude', 'Jude', 'Epistles'], ['Rev', 'Revelation', 'Apocalyptic'],
 ]
 
-const kjv = JSON.parse(readFileSync('data/raw/en_kjv.json', 'utf8').replace(/^﻿/, ''))
-if (kjv.length !== BOOKS.length) throw new Error(`expected ${BOOKS.length} books, got ${kjv.length}`)
+// Translations: all from the scrollmapper/bible_databases JSON (formats/json/<ID>.json), one provenance.
+// Every text is re-keyed to the KJV book/chapter/verse layout, which the cross-reference data uses.
+const TRANSLATIONS = [
+  { id: 'KJV', name: 'King James Version', year: '1769', license: 'Public domain in the US' },
+  { id: 'BSB', name: 'Berean Standard Bible', year: '2023', license: 'Dedicated to the public domain by its publisher' },
+  { id: 'NHEB', name: 'New Heart English Bible', year: '', license: 'Public domain (World English Bible derivative)' },
+  { id: 'ASV', name: 'American Standard Version', year: '1901', license: 'Public domain' },
+  { id: 'YLT', name: "Young's Literal Translation", year: '1898', license: 'Public domain' },
+  { id: 'Darby', name: 'Darby Bible', year: '1890', license: 'Public domain' },
+  { id: 'Webster', name: "Webster's Bible", year: '1833', license: 'Public domain' },
+]
+const readTranslation = (id) => {
+  const d = JSON.parse(readFileSync(`data/raw/${id}.json`, 'utf8').replace(/^\uFEFF/, ''))
+  if (d.books.length !== BOOKS.length) throw new Error(`${id}: expected ${BOOKS.length} books, got ${d.books.length}`)
+  return d.books
+}
 
+// The KJV defines the chapter and verse layout for everything else.
+const kjv = readTranslation('KJV')
 const books = []
-const text = []
 const abbrIndex = new Map()
 let offset = 0
 BOOKS.forEach(([abbr, name, genre], i) => {
-  const chapters = kjv[i].chapters.map((c) => c.length)
+  const chapters = kjv[i].chapters
+    .slice()
+    .sort((x, y) => x.chapter - y.chapter)
+    .map((c, ci) => {
+      if (c.chapter !== ci + 1) throw new Error(`${abbr}: chapters are not contiguous at ${c.chapter}`)
+      return c.verses.length
+    })
   const count = chapters.reduce((a, b) => a + b, 0)
   books.push({ abbr, name, genre, testament: i < 39 ? 'OT' : 'NT', chapters, start: offset, count })
   abbrIndex.set(abbr, i)
-  for (const ch of kjv[i].chapters) for (const v of ch) text.push(v.replace(/\{[^}]*\}/g, '').trim())
   offset += count
 })
+const totalVerses = offset
 
 const verseIndex = (ref) => {
   const [abbr, ch, v] = ref.split('.')
@@ -165,11 +188,64 @@ curatedOut.sort((x, y) => x.link - y.link)
 mkdirSync('public/data', { recursive: true })
 writeFileSync('public/data/refs.bin', buf)
 writeFileSync('public/data/books.json', JSON.stringify(books))
-writeFileSync('public/data/kjv.json', JSON.stringify(text))
+
+// Per-book text files, so the app fetches only the books a reader opens.
+rmSync('public/data/kjv.json', { force: true })
+rmSync('public/data/text', { recursive: true, force: true })
+const norm = (t) => t.replace(/\s+/g, ' ').trim()
+
+// The scrollmapper KJV writes every divine name as "Lord" / "God". The KJV prints the Hebrew name YHWH as small-caps
+// LORD (and "Lord GOD"), which matters to careful readers. When the older en_kjv.json is present, take its capitalization
+// for every verse whose words are otherwise identical.
+const tidy = (t) => norm(t.replace(/\{[^}]*\}/g, '').replace(/\s+([,.;:!?])/g, '$1'))
+const flatten = (t) => tidy(t).replace(/\bLORD\b/g, 'Lord').replace(/\bGOD\b/g, 'God')
+let divineNames = null
+try {
+  const old = JSON.parse(readFileSync('data/raw/en_kjv.json', 'utf8').replace(/^\uFEFF/, ''))
+  divineNames = old.map((b) => b.chapters.flat().map(tidy))
+} catch {
+  console.log('  (data/raw/en_kjv.json not found: KJV will print the divine name as "Lord" rather than "LORD")')
+}
+const manifest = []
+for (const t of TRANSLATIONS) {
+  const src = t.id === 'KJV' ? kjv : readTranslation(t.id)
+  let missing = 0
+  let merged = 0
+  let restored = 0
+  mkdirSync(`public/data/text/${t.id}`, { recursive: true })
+  books.forEach((book, bi) => {
+    const byKey = new Map()
+    for (const c of src[bi].chapters) for (const v of c.verses) byKey.set(c.chapter * 1000 + v.verse, norm(v.text))
+    const arr = []
+    book.chapters.forEach((n, ci) => {
+      const ch = ci + 1
+      for (let v = 1; v <= n; v++) arr.push(byKey.get(ch * 1000 + v) ?? '')
+      // A translation that splits a chapter into more verses than the KJV: fold the extras into the last one.
+      for (let v = n + 1; byKey.has(ch * 1000 + v); v++) {
+        arr[arr.length - 1] = `${arr[arr.length - 1]} ${byKey.get(ch * 1000 + v)}`.trim()
+        merged++
+      }
+    })
+    if (t.id === 'KJV' && divineNames) {
+      arr.forEach((verse, i) => {
+        const original = divineNames[bi][i]
+        if (original && original !== verse && flatten(original) === verse) {
+          arr[i] = original
+          restored++
+        }
+      })
+    }
+    missing += arr.filter((x) => x === '').length
+    writeFileSync(`public/data/text/${t.id}/${book.abbr}.json`, JSON.stringify(arr))
+  })
+  manifest.push({ ...t, missing })
+  console.log(`  ${t.id.padEnd(8)} verses absent from its base text: ${missing}${merged ? `, extra verses folded in: ${merged}` : ''}${restored ? `, divine-name capitalization restored in ${restored} verses` : ''}`)
+}
+writeFileSync('public/data/translations.json', JSON.stringify(manifest))
 writeFileSync('public/data/curated.json', JSON.stringify(curatedOut))
 
 const vs = recs.filter((r) => r[3] === 0).map((r) => r[2]).sort((x, y) => x - y)
 const pct = (p) => vs[Math.floor(p * (vs.length - 1))]
-console.log(`verses: ${text.length}, links: ${recs.length}, dropped: ${dropped}, merged duplicates: ${merged}`)
+console.log(`verses: ${totalVerses}, links: ${recs.length}, dropped: ${dropped}, merged duplicates: ${merged}`)
 console.log(`curated: ${curated.length} entries -> ${curatedOut.length} links (${marked} matched an existing cross-reference, ${appended} appended)`)
 console.log(`votes p10/p25/p50/p75/p90/max: ${[0.1, 0.25, 0.5, 0.75, 0.9, 1].map(pct).join(' / ')}`)

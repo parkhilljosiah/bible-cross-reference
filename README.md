@@ -22,7 +22,10 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
   selection*. Up to 400×.
 - **Filters:** between / and book pickers, a minimum-votes slider, *zoom to chosen books*, *Reset all*.
 - **Curated allusions:** a toggle that shows only editorially chosen links, typed as quotation, allusion or echo.
-- **Selection panel:** connected books, strongest links, KJV text for both ends; a draggable bottom sheet on phones.
+- **Translations:** seven public-domain translations (KJV, BSB, NHEB, ASV, YLT, Darby, Webster), switchable and
+  comparable side by side. Text is fetched one book at a time, so nothing is downloaded until a passage is opened.
+- **Selection panel:** connected books, strongest links, passage text for both ends of each link; a draggable bottom
+  sheet on phones.
 - **Shareable URLs:** the address bar always reflects the current view (see below). *Share link* copies it.
 
 ### URL parameters
@@ -35,6 +38,8 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 | `zoom` | `1` compresses the baseline to the chosen books | `zoom=1` |
 | `src` | `curated` shows only curated links | `src=curated` |
 | `sel` | Pinned selection: a book, a verse, or a range | `sel=Rev`, `sel=Rev.1.7`, `sel=Ps.22.1-Ps.22.31` |
+| `tr` | Translation id for passage text (default `KJV`) | `tr=BSB` |
+| `cmp` | A second translation shown beneath the first | `cmp=YLT` |
 
 Example: `/?between=Rev&and=Dan,Ezek&src=curated&zoom=1&sel=Rev`
 
@@ -42,9 +47,9 @@ Example: `/?between=Rev&and=Dan,Ezek&src=curated&zoom=1&sel=Rev`
 
 `public/data/` is generated output committed to the repo, so the app (and CI) needs no data download. To rebuild it:
 
-1. Download into `data/raw/` (git-ignored):
-   - `cross_references.txt` from the [OpenBible.info cross-references](https://www.openbible.info/labs/cross-references/) zip
-   - `en_kjv.json` from [thiagobodruk/bible](https://github.com/thiagobodruk/bible/blob/master/json/en_kjv.json)
+1. `bash scripts/fetch-raw.sh` downloads the sources into `data/raw/` (git-ignored): the OpenBible.info
+   cross-references, the translation JSON files from [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases),
+   and the older `en_kjv.json` (used only to restore the KJV's small-caps LORD).
 2. Edit `data/curated/allusions.txt` if you are changing the curated layer.
 3. `node scripts/build-data.mjs`
 
@@ -64,7 +69,7 @@ rest are added as new links.
 
 | File | Role |
 | --- | --- |
-| `scripts/build-data.mjs` | Maps refs to global verse indices (0–31,101), dedupes A↔B/B↔A, merges the curated layer, writes `refs.bin` (8 bytes/link), `books.json`, `curated.json`, `kjv.json` |
+| `scripts/build-data.mjs` | Maps refs to global verse indices (0–31,101), dedupes A↔B/B↔A, merges the curated layer, writes `refs.bin` (8 bytes/link), `books.json`, `curated.json`, `translations.json`, and `text/<ID>/<Book>.json` (one verse array per book per translation) |
 | `src/data.ts` | Loads the binary data; builds per-verse adjacency (CSR) for fast "links touching this range" lookups |
 | `src/graph.ts` | Filters, the baseline layout, and the zoom/pan view transform |
 | `src/raster.ts` | Additive arc rasterizer: accumulates arcs in a float buffer, then tone-maps. Canvas `stroke()` can't blend overlapping arcs within one path. Clips each arc to the visible x-range so deep zoom stays cheap |
@@ -81,10 +86,32 @@ The build uses relative asset paths, so `dist/` works from the site root or any 
   `.github/workflows/deploy.yml` lints, builds and publishes.
 - **Netlify / Vercel / Cloudflare Pages:** build command `npm run build`, output directory `dist`.
 
+## Translations
+
+| ID | Translation | Notes |
+| --- | --- | --- |
+| `KJV` | King James Version (1769) | Divine-name capitalization (LORD) restored from a second source |
+| `BSB` | Berean Standard Bible (2023) | Dedicated to the public domain by its publisher; modern English |
+| `NHEB` | New Heart English Bible | Derived from the World English Bible, which is public domain |
+| `ASV` | American Standard Version (1901) | |
+| `YLT` | Young's Literal Translation (1898) | |
+| `Darby` | Darby Bible (1890) | |
+| `Webster` | Webster's Bible (1833) | |
+
+All are re-keyed to the KJV chapter and verse layout, which the cross-reference data uses. Translations built on
+critical texts omit a few verses the KJV has (for example Matthew 17:21); the app says so instead of showing a blank.
+Square brackets in Darby, Webster and others are the translators' own (supplied words), kept as in the source.
+
+To add a translation: put its `<ID>.json` in `data/raw/`, add it to `TRANSLATIONS` in `scripts/build-data.mjs` and to
+the loop in `scripts/fetch-raw.sh`, and rebuild. The build reports any verses it can't align. The OEB file in the same
+repository is **not** usable: most of its verses are empty.
+
 ## Data and attribution
 
 - Cross-references: [OpenBible.info](https://www.openbible.info/labs/cross-references/), CC-BY. Votes are community
   scores, so low-vote links are weak evidence of literary dependence.
-- Text: King James Version. The KJV text itself is public domain in the US, but **confirm the license of the specific
-  JSON file you use before publishing**; if in doubt, swap in a source with an explicit public-domain declaration.
+- Texts: public-domain translations as above, taken from `scrollmapper/bible_databases`. That repository's own license
+  covers its code, and its README states no per-translation license, so the public-domain status above rests on each
+  translation's own history. **Confirm each text's status for your jurisdiction before promoting the site** (most
+  sources state US public domain only). The KJV is also subject to a Crown patent in the UK.
 - Inspired by Chris Harrison and Christoph Römhild's cross-reference arc diagram. No part of their artwork is used.

@@ -1,14 +1,20 @@
 import type { Data } from './data'
 import { DEFAULT_FILTERS, type Filters, type Selection } from './graph'
 
+export const DEFAULT_TRANSLATION = 'KJV'
+
 export interface AppState {
   filters: Filters
   pinned: Selection | null
+  /** Translation shown in the passage panel, and an optional second one shown beneath it. */
+  translation: string
+  compare: string | null
 }
 
 // ?between=Rev&and=Dan,Ezek&votes=6&zoom=1&src=curated&sel=Rev            (a whole book)
 //                                                       &sel=Rev.1.7       (a verse)
 //                                                       &sel=Ps.22.1-Ps.22.31
+//   &tr=ASV&cmp=BSB   (text translation, and one to compare against)
 
 const verseRef = (d: Data, v: number) => `${d.books[d.bookOf[v]].abbr}.${d.chapterOf[v]}.${d.verseOf[v]}`
 
@@ -37,7 +43,7 @@ function parseBooks(d: Data, value: string | null): number[] {
 /** Returns null when the URL carries no state, so the app keeps its defaults. */
 export function readState(d: Data, search: string): AppState | null {
   const p = new URLSearchParams(search)
-  if (![...p.keys()].some((k) => ['between', 'and', 'votes', 'zoom', 'src', 'sel'].includes(k))) return null
+  if (![...p.keys()].some((k) => ['between', 'and', 'votes', 'zoom', 'src', 'sel', 'tr', 'cmp'].includes(k))) return null
 
   const between = parseBooks(d, p.get('between'))
   const and = parseBooks(d, p.get('and'))
@@ -63,11 +69,14 @@ export function readState(d: Data, search: string): AppState | null {
       if (lo !== null && hi !== null && hi >= lo) pinned = { lo, hi }
     }
   }
-  return { filters, pinned }
+  const known = (id: string | null) => (id && d.translations.some((t) => t.id === id) ? id : null)
+  const translation = known(p.get('tr')) ?? DEFAULT_TRANSLATION
+  const cmp = known(p.get('cmp'))
+  return { filters, pinned, translation, compare: cmp && cmp !== translation ? cmp : null }
 }
 
 /** Query string (with leading "?", or empty) that reproduces the state; defaults are omitted. */
-export function writeState(d: Data, { filters, pinned }: AppState): string {
+export function writeState(d: Data, { filters, pinned, translation, compare }: AppState): string {
   const p = new URLSearchParams()
   const abbrs = (list: number[]) => list.map((i) => d.books[i].abbr).join(',')
   if (filters.between.length) p.set('between', abbrs(filters.between))
@@ -87,6 +96,8 @@ export function writeState(d: Data, { filters, pinned }: AppState): string {
           : `${verseRef(d, pinned.lo)}-${verseRef(d, pinned.hi)}`,
     )
   }
+  if (translation !== DEFAULT_TRANSLATION) p.set('tr', translation)
+  if (compare) p.set('cmp', compare)
   const s = p.toString().replace(/%2C/g, ',')
   return s ? `?${s}` : ''
 }

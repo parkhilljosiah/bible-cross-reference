@@ -23,8 +23,18 @@ export interface Curated {
   bRange: [number, number]
 }
 
+export interface Translation {
+  id: string
+  name: string
+  year: string
+  license: string
+  /** Verses its base text omits (e.g. Matthew 17:21 in critical-text translations). */
+  missing: number
+}
+
 export interface Data {
   books: Book[]
+  translations: Translation[]
   totalVerses: number
   /** Cross-reference i links verse a[i] to verse b[i] (a < b), with community votes[i]. */
   a: Uint16Array
@@ -63,8 +73,9 @@ export const GENRE_COLORS: Record<Genre, string> = {
 const base = import.meta.env.BASE_URL
 
 export async function loadData(): Promise<Data> {
-  const [books, buf, curatedRaw] = await Promise.all([
+  const [books, translations, buf, curatedRaw] = await Promise.all([
     fetch(`${base}data/books.json`).then((r) => r.json() as Promise<Book[]>),
+    fetch(`${base}data/translations.json`).then((r) => r.json() as Promise<Translation[]>),
     fetch(`${base}data/refs.bin`).then((r) => r.arrayBuffer()),
     fetch(`${base}data/curated.json`).then(
       (r) =>
@@ -117,16 +128,38 @@ export async function loadData(): Promise<Data> {
   for (const c of curatedRaw) curated.set(c.link, { type: c.type, note: c.note, aRange: c.lo, bRange: c.hi })
 
   return {
-    books, totalVerses, a, b, votes, kind, linkCount, curated, curatedCount: curated.size,
+    books, translations, totalVerses, a, b, votes, kind, linkCount, curated, curatedCount: curated.size,
     bookOf, chapterOf, verseOf, adjStart, adj,
   }
 }
 
-let textPromise: Promise<string[]> | null = null
-/** KJV verse text indexed by global verse index; loaded once, on demand. */
-export function loadText(): Promise<string[]> {
-  textPromise ??= fetch(`${base}data/kjv.json`).then((r) => r.json())
-  return textPromise
+// Verse text is stored one file per book per translation, and only the books a reader opens are fetched.
+const bookText = new Map<string, Promise<string[]>>()
+
+function loadBookText(translation: string, abbr: string): Promise<string[]> {
+  const key = `${translation}/${abbr}`
+  let p = bookText.get(key)
+  if (!p) {
+    p = fetch(`${base}data/text/${key}.json`).then((r) => {
+      if (!r.ok) throw new Error(`Couldn't load ${key} (${r.status})`)
+      return r.json() as Promise<string[]>
+    })
+    p.catch(() => bookText.delete(key)) // allow a retry after a network failure
+    bookText.set(key, p)
+  }
+  return p
+}
+
+/** Text of the verses lo..hi (global indices, inclusive) in a translation; '' where its base text omits a verse. */
+export async function loadVerses(d: Data, translation: string, lo: number, hi: number): Promise<string[]> {
+  const out: string[] = []
+  for (let bi = d.bookOf[lo]; bi <= d.bookOf[hi]; bi++) {
+    const book = d.books[bi]
+    const text = await loadBookText(translation, book.abbr)
+    const to = Math.min(hi, book.start + book.count - 1)
+    for (let v = Math.max(lo, book.start); v <= to; v++) out.push(text[v - book.start] ?? '')
+  }
+  return out
 }
 
 export function verseLabel(d: Data, v: number): string {

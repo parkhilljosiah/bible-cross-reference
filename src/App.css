@@ -608,3 +608,52 @@ button {
     display: none;
   }
 }
+
+/* Translation pickers */
+.translation-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.translation-bar label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.translation-bar select {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.passage + .passage {
+  margin-top: 8px;
+}
+
+.passage p {
+  margin: 4px 0;
+}
+
+.tr-tag {
+  margin-right: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+@media (pointer: coarse) {
+  .translation-bar select {
+    min-height: 44px;
+  }
+}
