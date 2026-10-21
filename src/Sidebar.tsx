@@ -137,7 +137,8 @@ export default function Sidebar({
         <ul className="tips">
           <li>
             <strong>Click a book</strong> on the colored strip to light up every link from it and read the passages here.
-            Click it again to clear.
+            On a phone, <strong>slide your finger along the strip</strong> and lift on the book you want. Tap the
+            selected book again to clear.
           </li>
           <li>
             <strong>Click the bars</strong> beneath the strip to select just a few verses at a time.

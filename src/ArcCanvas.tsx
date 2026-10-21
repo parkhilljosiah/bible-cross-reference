@@ -417,14 +417,37 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
   }
 
   const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const gesture = useRef({ mode: null as 'scrub' | 'pan' | 'pinch' | null, x0: 0, off0: 0, k0: 1, dist0: 1, mid0: 0, moved: false })
+  const gesture = useRef({
+    mode: null as 'scrub' | 'pan' | 'pinch' | null,
+    /** Which part of the strip a scrub started on: the book strip, or the verse-density bars below it. */
+    zone: 'book' as 'book' | 'range',
+    x0: 0,
+    off0: 0,
+    k0: 1,
+    dist0: 1,
+    mid0: 0,
+    moved: false,
+  })
   const suppressClick = useRef(false)
+
+  /**
+   * What a drag along the strip is over. Only the horizontal position matters once a drag has started: the finger can
+   * drift off the thin strip, or past either end, and still lands on the nearest book (or verses).
+   */
+  const locateScrub = (clientX: number, rect: DOMRect): Selection | null => {
+    const x = Math.max(0.5, Math.min(geo.w - 0.5, clientX - rect.left))
+    if (gesture.current.zone === 'range') return layout.rangeAt(x, HIT_HALF, true)
+    const bi = layout.bookAt(x, Infinity)
+    if (bi < 0) return null
+    const b = data.books[bi]
+    return { lo: b.start, hi: b.start + b.count - 1 }
+  }
 
   const track = (e: React.PointerEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
     pointerRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
     positionTooltip()
-    const next = locate(e.clientX, e.clientY, rect)
+    const next = gesture.current.mode === 'scrub' ? locateScrub(e.clientX, rect) : locate(e.clientX, e.clientY, rect)
     setHover((prev) => (same(prev, next) ? prev : next))
   }
 
@@ -468,7 +491,18 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
       }
       setHover(null)
     } else {
-      g.mode = 'scrub'
+      Object.assign(g, {
+        mode: 'scrub',
+        zone: y <= geo.baseY + 2 + BOOK_H + DENSITY_GAP / 2 ? 'book' : 'range',
+        x0: x,
+        moved: false,
+      })
+      // Keep receiving moves if a mouse drag leaves the strip (touch pointers are captured implicitly).
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {
+        /* pointer already gone */
+      }
       track(e)
     }
   }
@@ -499,6 +533,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
         commitSoon()
       }
     } else if (g.mode === 'scrub') {
+      if (Math.abs(p.x - g.x0) > 6) g.moved = true
       track(e)
     }
   }
@@ -518,6 +553,20 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
       if (g.moved) {
         suppressClick.current = true
         commit()
+      }
+    } else if (g.mode === 'scrub') {
+      g.mode = null
+      // A drag along the strip selects the book (or verses) it ends on. Browsers often send no click after a drag,
+      // so waiting for one would select nothing. A cancelled gesture (e.g. a system swipe) selects nothing.
+      if (g.moved && e.type !== 'pointercancel') {
+        const landed = locateScrub(e.clientX, e.currentTarget.getBoundingClientRect())
+        if (landed) onPin(landed)
+        // Where a click does follow, it must not toggle the selection just made. Browsers differ on whether one comes,
+        // so the guard expires rather than risk swallowing the next real tap.
+        suppressClick.current = true
+        window.setTimeout(() => {
+          suppressClick.current = false
+        }, 400)
       }
     } else {
       g.mode = null
@@ -604,7 +653,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
       {hover && (
         <div ref={tooltipRef} className="tooltip">
           <strong>{rangeLabel(data, hover.lo, hover.hi)}</strong>
-          <span>{same(hover, pinned) ? 'Selected' : 'Click to show connections'}</span>
+          <span>{same(hover, pinned) ? 'Selected' : COARSE ? 'Lift to select' : 'Click to show connections'}</span>
         </div>
       )}
     </div>

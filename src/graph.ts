@@ -100,9 +100,10 @@ export interface Layout {
   /** Pixels per verse. */
   ppv: number
   verseX: (v: number) => number
-  bookAt: (x: number) => number
+  /** Book under pixel x, or -1. `tolerance` is how far outside a book still counts (Infinity: nearest book). */
+  bookAt: (x: number, tolerance?: number) => number
   /** Verse range under pixel column x, widened by `half` px but kept inside one book. */
-  rangeAt: (x: number, half: number) => Selection | null
+  rangeAt: (x: number, half: number, snap?: boolean) => Selection | null
 }
 
 /**
@@ -137,7 +138,7 @@ export function makeLayout(
     const bi = d.bookOf[v]
     return x0[bi] + (v - d.books[bi].start + 0.5) * ppv
   }
-  const bookAt = (x: number) => {
+  const bookAt = (x: number, tolerance = Math.max(g, 1) + 1) => {
     let best = -1
     let bestDist = Infinity
     for (let i = 0; i < nb; i++) {
@@ -145,10 +146,10 @@ export function makeLayout(
       const dist = x < x0[i] ? x0[i] - x : x > x1[i] ? x - x1[i] : 0
       if (dist < bestDist) { best = i; bestDist = dist }
     }
-    return bestDist <= Math.max(g, 1) + 1 ? best : -1
+    return bestDist <= tolerance ? best : -1
   }
-  const rangeAt = (x: number, half: number): Selection | null => {
-    const bi = bookAt(x)
+  const rangeAt = (x: number, half: number, snap = false): Selection | null => {
+    const bi = bookAt(x, snap ? Infinity : undefined)
     if (bi < 0) return null
     const book = d.books[bi]
     const toVerse = (px: number) => book.start + Math.floor((px - x0[bi]) / ppv)

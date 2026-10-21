@@ -65,6 +65,13 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   and no long tasks; a click renders once (about 55-120 ms, heaviest book first). On phones, opening the bottom sheet
   resizes the canvas, so a selection can paint twice (once per size). Don't make hover trigger raster work again; if a
   hover preview is wanted, make it cheap (labels or counts), not an overlay render.
+- **Dragging along the strip selects on release.** A drag that starts on the strip tracks only x (the finger may drift
+  off the thin strip or past either end and still lands on the nearest book; `locateScrub`, `bookAt(x, Infinity)`), shows
+  the hover box and a "Lift to select" tooltip, and on pointerup calls `onPin` itself. It does not wait for a `click`:
+  phone browsers usually send none after a drag. A short-lived `suppressClick` stops a click that does follow from
+  toggling the new selection off (it expires after 400 ms so it can't swallow the next tap); `pointercancel` selects
+  nothing; a drag onto the selected book keeps it, a plain tap on it clears it. Drags started on the density bars select a
+  verse range instead of a book.
 - **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
   only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
   the worker.
