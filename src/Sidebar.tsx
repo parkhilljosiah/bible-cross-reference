@@ -136,13 +136,14 @@ export default function Sidebar({
         </p>
         <ul className="tips">
           <li>
-            <strong>Hover</strong> the colored strip to light up every link from a book.
+            <strong>Click a book</strong> on the colored strip to light up every link from it and read the passages here.
+            Click it again to clear.
           </li>
           <li>
-            <strong>Hover the bars</strong> beneath it to inspect a few verses at a time.
+            <strong>Click the bars</strong> beneath the strip to select just a few verses at a time.
           </li>
           <li>
-            <strong>Click</strong> to pin a selection and read the passages here.
+            <strong>Hover</strong> to see which book or verses you are over; nothing is drawn until you click.
           </li>
           <li>
             Use <strong>Between</strong> and <strong>And</strong> to compare books, such as <em>Revelation</em> with <em>Daniel</em> and <em>Ezekiel</em>.

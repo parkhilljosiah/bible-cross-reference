@@ -59,6 +59,15 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
 - **Custom rasterizer, not canvas `stroke()`.** One path's overlapping segments paint only once, so strokes can't give
   the additive glow of the original. Dense (>20k arcs) views render at 1x with nearest-pixel splats and are upscaled.
 - **Highlight overlay uses a hue-preserving tone map** (`preserveHue`). Per-channel mapping washed big books out to white.
+- **Highlights render on click, not on hover.** Hovering the strip only moves a DOM box (`.marker.hover`) and a name
+  tooltip; the arc highlight (overlay raster) is driven by the pinned selection alone. Rendering one up-to-25k-arc highlight
+  per pointer move was the cause of the lag when dragging across books. Measured by scrubbing 60 moves: 0 highlight renders
+  and no long tasks; a click renders once (about 55-120 ms, heaviest book first). On phones, opening the bottom sheet
+  resizes the canvas, so a selection can paint twice (once per size). Don't make hover trigger raster work again; if a
+  hover preview is wanted, make it cheap (labels or counts), not an overlay render.
+- **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
+  only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
+  the worker.
 - **Zoom feedback:** during a gesture a CSS transform on `.layers` approximates the target view; after ~140 ms the view
   commits and the worker re-renders. `painted` vs `target` refs track the two.
 - **Arcs are a true semicircle, anchored under the top bar** (`geo` in `ArcCanvas.tsx`); squashed only on short screens.

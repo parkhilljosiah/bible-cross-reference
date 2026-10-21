@@ -19,7 +19,11 @@ export class RasterClient {
         const done = this.waiting.get(e.data.id)
         this.waiting.delete(e.data.id)
         if (!done) return
-        done(e.data.skipped ? null : { data: e.data.data, width: e.data.width, height: e.data.height })
+        done(
+          e.data.skipped
+            ? null
+            : { data: e.data.data, width: e.data.width, height: e.data.height, top: e.data.top, fullHeight: e.data.fullHeight },
+        )
       }
     } catch {
       this.worker = null

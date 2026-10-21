@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { GENRE_COLORS, KIND_COLORS, rangeLabel, type Data, type Genre } from './data'
 import {
   IDENTITY_VIEW,
@@ -60,24 +60,37 @@ const clampView = (v: View, usable: number): View => {
 
 function sizeCanvas(canvas: HTMLCanvasElement, g: Geometry) {
   const dpr = window.devicePixelRatio || 1
-  canvas.width = Math.round(g.w * dpr)
-  canvas.height = Math.round(g.h * dpr)
-  canvas.style.width = `${g.w}px`
-  canvas.style.height = `${g.h}px`
+  const w = Math.round(g.w * dpr)
+  const h = Math.round(g.h * dpr)
+  // Assigning width/height reallocates the bitmap, so only do it when the size really changed.
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w
+    canvas.height = h
+    canvas.style.width = `${g.w}px`
+    canvas.style.height = `${g.h}px`
+  }
   const c = canvas.getContext('2d')!
   c.setTransform(1, 0, 0, 1, 0, 0)
-  c.clearRect(0, 0, canvas.width, canvas.height)
+  c.clearRect(0, 0, w, h)
   return { c, dpr }
 }
 
-/** Draws a rasterized arc image scaled onto the full-size canvas (dense images are rendered at 1x). */
+// One scratch canvas is enough: it is filled and drawn synchronously.
+let scratch: HTMLCanvasElement | null = null
+
+/** Draws a rasterized band of rows onto the full-size canvas (dense images are rendered at 1x and scaled up). */
 function blit(c: CanvasRenderingContext2D, dpr: number, g: Geometry, res: RasterResult) {
-  const off = document.createElement('canvas')
-  off.width = res.width
-  off.height = res.height
-  off.getContext('2d')!.putImageData(new ImageData(res.data, res.width, res.height), 0, 0)
+  if (res.height === 0) return
+  scratch ??= document.createElement('canvas')
+  if (scratch.width !== res.width || scratch.height !== res.height) {
+    scratch.width = res.width
+    scratch.height = res.height
+  }
+  scratch.getContext('2d')!.putImageData(new ImageData(res.data, res.width, res.height), 0, 0)
+  const sx = Math.round(g.w * dpr) / res.width
+  const sy = Math.round(g.h * dpr) / res.fullHeight
   c.imageSmoothingEnabled = true
-  c.drawImage(off, 0, 0, Math.round(g.w * dpr), Math.round(g.h * dpr))
+  c.drawImage(scratch, 0, 0, res.width, res.height, 0, res.top * sy, res.width * sx, res.height * sy)
 }
 
 type JobOptions = Omit<RasterOptions, 'width' | 'height' | 'dpr' | 'baseY' | 'scaleY'>
@@ -88,6 +101,7 @@ function makeJob(
   count: number,
   fill: (xa: Float32Array, xb: Float32Array, color: Uint8Array) => number,
   o: JobOptions,
+  denseAbove = 20000,
 ): { set: ArcSet; opts: RasterOptions } {
   const xa = new Float32Array(count)
   const xb = new Float32Array(count)
@@ -95,7 +109,7 @@ function makeJob(
   const m = fill(xa, xb, color)
   const dpr = window.devicePixelRatio || 1
   // Dense images are blurry anyway, so render them at 1x and let the browser scale them up.
-  const res = m > 20000 ? 1 : dpr
+  const res = m > denseAbove ? 1 : dpr
   return {
     set: { xa, xb, color, count: m },
     opts: { ...o, width: g.w, height: g.h, dpr: res, baseY: g.baseY, scaleY: g.scaleY },
@@ -144,26 +158,9 @@ function paintBase(
   }
 }
 
-function paintMarkers(
-  canvas: HTMLCanvasElement,
-  layout: Layout,
-  g: Geometry,
-  res: RasterResult | null,
-  hover: Selection | null,
-  pinned: Selection | null,
-) {
+function paintOverlay(canvas: HTMLCanvasElement, g: Geometry, res: RasterResult | null) {
   const { c, dpr } = sizeCanvas(canvas, g)
   if (res) blit(c, dpr, g, res)
-  c.setTransform(dpr, 0, 0, dpr, 0, 0)
-  const mark = (s: Selection, strong: boolean) => {
-    const x0 = layout.verseX(s.lo) - layout.ppv / 2
-    const x1 = layout.verseX(s.hi) + layout.ppv / 2
-    c.strokeStyle = strong ? '#fff' : 'rgba(255,255,255,0.6)'
-    c.lineWidth = strong ? 2 : 1.5
-    c.strokeRect(x0, g.baseY + 1, Math.max(2, x1 - x0), BOOK_H + 2)
-  }
-  if (pinned) mark(pinned, true)
-  if (hover && !same(hover, pinned)) mark(hover, false)
 }
 
 export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
@@ -176,7 +173,10 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
 
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [hover, setHover] = useState<Selection | null>(null)
-  const [pointer, setPointer] = useState({ x: 0, y: 0 })
+  // The pointer position only moves the tooltip, so it lives in refs: no re-render per pointer move.
+  const pointerRef = useRef({ x: 0, y: 0 })
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const [overlayBusy, setOverlayBusy] = useState(false)
   const [view, setView] = useState<View>(IDENTITY_VIEW)
   const [busy, setBusy] = useState(false)
 
@@ -355,18 +355,19 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, ctx, layout, geo, size, viewC])
 
-  // Overlay: arcs touching the hovered or pinned range, colored by what they connect to.
+  // Overlay: arcs touching the pinned selection, colored by what they connect to. This renders when a selection is made
+  // (a click), not while the pointer moves: hovering only shows a marker and a name.
   useEffect(() => {
     if (size.w <= 0 || size.h <= 0) return
     const client = overlayClient.current
     const canvas = overlayRef.current
     if (!client || !canvas) return
-    const sel = hover ?? pinned
-    if (!sel) {
+    if (!pinned) {
       sizeCanvas(canvas, geo)
+      setOverlayBusy(false)
       return
     }
-    const ids = linksTouching(data, ctx, sel.lo, sel.hi)
+    const ids = linksTouching(data, ctx, pinned.lo, pinned.hi)
     const job = makeJob(
       geo,
       ids.length,
@@ -378,23 +379,27 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
           if (x1 < 0 || x0 > geo.w) continue
           xa[m] = x0
           xb[m] = x1
-          const other = data.a[e] >= sel.lo && data.a[e] <= sel.hi ? data.b[e] : data.a[e]
+          const other = data.a[e] >= pinned.lo && data.a[e] <= pinned.hi ? data.b[e] : data.a[e]
           color[m] = GENRES.indexOf(data.books[data.bookOf[other]].genre)
           m++
         }
         return m
       },
       { palette: GENRE_PALETTE, gain: ids.length > 3000 ? 1.3 : 2.2, gamma: 0.8, preserveHue: true },
+      // Past a few thousand arcs the highlight is soft anyway; 1x more than halves the work.
+      4000,
     )
     let stale = false
+    setOverlayBusy(true)
     client.render(job.set, job.opts).then((res) => {
       if (stale || !res) return
-      paintMarkers(canvas, layout, geo, res, hover, pinned)
+      paintOverlay(canvas, geo, res)
+      setOverlayBusy(false)
     })
     return () => {
       stale = true
     }
-  }, [data, ctx, layout, geo, size, hover, pinned])
+  }, [data, ctx, layout, geo, size, pinned])
 
   // ---- pointer input ------------------------------------------------------------------------------
 
@@ -417,10 +422,22 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
 
   const track = (e: React.PointerEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
-    setPointer({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    pointerRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    positionTooltip()
     const next = locate(e.clientX, e.clientY, rect)
     setHover((prev) => (same(prev, next) ? prev : next))
   }
+
+  /** Moves the tooltip with the pointer by writing to the element directly. */
+  function positionTooltip() {
+    const el = tooltipRef.current
+    if (!el) return
+    const { x, y } = pointerRef.current
+    el.style.left = `${Math.max(8, Math.min(x + (COARSE ? -75 : 14), size.w - 190))}px`
+    el.style.top = `${Math.max(8, y - (COARSE ? 90 : 46))}px`
+  }
+  // Place it as soon as it appears (before paint), since track() ran while it did not exist yet.
+  useLayoutEffect(positionTooltip, [hover, size.w])
 
   const onPointerDown = (e: React.PointerEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -507,10 +524,12 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
     }
   }
 
-  const hoverCount = useMemo(
-    () => (hover ? linksTouching(data, ctx, hover.lo, hover.hi).length : 0),
-    [hover, data, ctx],
-  )
+  /** Position of a selection box on the book strip. DOM, not canvas, so it follows the pointer immediately. */
+  const markerBox = (s: Selection) => {
+    const x0 = layout.verseX(s.lo) - layout.ppv / 2
+    const x1 = layout.verseX(s.hi) + layout.ppv / 2
+    return { left: x0, width: Math.max(2, x1 - x0), top: geo.baseY + 1, height: BOOK_H + 2 }
+  }
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation()
 
@@ -534,7 +553,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
         onPin(target && !same(target, pinned) ? target : null)
       }}
     >
-      <div ref={layersRef} className={hover || pinned ? 'layers has-selection' : 'layers'}>
+      <div ref={layersRef} className={pinned ? 'layers has-selection' : 'layers'}>
         <canvas
           ref={baseRef}
           className="layer base"
@@ -547,6 +566,8 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
           aria-hidden="true"
           style={{ cursor: hover ? 'pointer' : 'default' }}
         />
+        {pinned && <div className="marker pinned" style={markerBox(pinned)} />}
+        {hover && !same(hover, pinned) && <div className="marker hover" style={markerBox(hover)} />}
       </div>
 
       <div className="zoom-controls" onPointerDown={stop} onPointerUp={stop} onClick={stop}>
@@ -576,20 +597,14 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
         )}
       </div>
 
-      <div className={busy ? 'busy on' : 'busy'} aria-hidden="true">
+      <div className={busy || overlayBusy ? 'busy on' : 'busy'} aria-hidden="true">
         Rendering…
       </div>
 
       {hover && (
-        <div
-          className="tooltip"
-          style={{
-            left: Math.max(8, Math.min(pointer.x + (COARSE ? -75 : 14), size.w - 170)),
-            top: Math.max(8, pointer.y - (COARSE ? 90 : 46)),
-          }}
-        >
+        <div ref={tooltipRef} className="tooltip">
           <strong>{rangeLabel(data, hover.lo, hover.hi)}</strong>
-          <span>{hoverCount.toLocaleString()} links</span>
+          <span>{same(hover, pinned) ? 'Selected' : 'Click to show connections'}</span>
         </div>
       )}
     </div>

@@ -24,11 +24,17 @@ export interface RasterOptions {
   preserveHue?: boolean
 }
 
+/**
+ * Only the band of rows that any arc touched is returned, which keeps short, local highlights cheap to compute,
+ * transfer and paint. Rows are in raster pixels; the full image is `width` x `fullHeight`.
+ */
 export interface RasterResult {
-  /** Opaque RGBA pixels, width * height * 4. */
+  /** Opaque RGBA pixels for rows top .. top + height - 1: width * height * 4 bytes. */
   data: Uint8ClampedArray<ArrayBuffer>
   width: number
   height: number
+  top: number
+  fullHeight: number
 }
 
 /** Above this many arcs, rasterize() switches to its fast, non-anti-aliased path. */
@@ -54,14 +60,24 @@ export function hslToRgb(h: number, s: number, l: number): RGB {
  * Each arc is clipped to the visible x-range before stepping, so zooming in far enough that
  * one arc is thousands of pixels wide costs only as much as the part that is on screen.
  */
+// The accumulation buffer is tens of megabytes at phone resolution; allocating and zeroing a fresh one for every render
+// was a large part of the cost, so keep one around and clear it in place.
+let accBuffer = new Float32Array(0)
+const SAMPLE_BUDGET = 20000
+
 export function rasterize(set: ArcSet, o: RasterOptions): RasterResult {
   const W = Math.max(1, Math.round(o.width * o.dpr))
   const H = Math.max(1, Math.round(o.height * o.dpr))
-  const acc = new Float32Array(W * H * 3)
+  const need = W * H * 3
+  if (accBuffer.length < need) accBuffer = new Float32Array(need)
+  else accBuffer.fill(0, 0, need)
+  const acc = accBuffer
   const baseY = o.baseY * o.dpr
   const pal = o.palette.map(([r, g, b]) => [r / 255, g / 255, b / 255])
   // Dense pictures are blurry by nature, so trade anti-aliasing for speed there.
   const fast = set.count > FAST_ABOVE
+  let minY = H
+  let maxY = -1
 
   for (let k = 0; k < set.count; k++) {
     const x0 = set.xa[k] * o.dpr
@@ -93,6 +109,8 @@ export function rasterize(set: ArcSet, o: RasterOptions): RasterResult {
         const ix = (x + 0.5) | 0
         const iy = (y + 0.5) | 0
         if (ix < 0 || iy < 0 || ix >= W || iy >= H) continue
+        if (iy < minY) minY = iy
+        if (iy > maxY) maxY = iy
         const i = (iy * W + ix) * 3
         acc[i] += cr
         acc[i + 1] += cg
@@ -102,6 +120,8 @@ export function rasterize(set: ArcSet, o: RasterOptions): RasterResult {
       const ix = Math.floor(x)
       const iy = Math.floor(y)
       if (ix < 0 || iy < 0 || ix >= W - 1 || iy >= H - 1) continue
+      if (iy < minY) minY = iy
+      if (iy + 1 > maxY) maxY = iy + 1
       const fx = x - ix
       const fy = y - iy
       const i = (iy * W + ix) * 3
@@ -125,15 +145,25 @@ export function rasterize(set: ArcSet, o: RasterOptions): RasterResult {
     }
   }
 
-  // Normalize against the ~99th percentile of lit pixels so the picture is well exposed
-  // whether 300,000 arcs are on screen or 40.
-  const samples: number[] = []
-  for (let p = 0; p < W * H; p += 7) {
+  // Nothing landed on screen.
+  if (maxY < minY) return { data: new Uint8ClampedArray(0), width: W, height: 0, top: 0, fullHeight: H }
+
+  const top = minY
+  const bandH = maxY - minY + 1
+  const from = top * W
+  const to = (top + bandH) * W
+
+  // Normalize against the ~99th percentile of lit pixels so the picture is well exposed whether 300,000 arcs are on
+  // screen or 40. A fixed sample budget keeps the sort cheap however large the image is.
+  const stride = Math.max(1, Math.floor((to - from) / SAMPLE_BUDGET))
+  const samples = new Float32Array(Math.ceil((to - from) / stride))
+  let n = 0
+  for (let p = from; p < to; p += stride) {
     const v = acc[p * 3] + acc[p * 3 + 1] + acc[p * 3 + 2]
-    if (v > 0) samples.push(v / 3)
+    if (v > 0) samples[n++] = v / 3
   }
-  samples.sort((x, y) => x - y)
-  const ref = samples.length ? samples[Math.floor(samples.length * 0.99)] || samples[samples.length - 1] : 1
+  const sorted = samples.subarray(0, n).sort()
+  const ref = n ? sorted[Math.floor(n * 0.99)] || sorted[n - 1] : 1
 
   // exp/pow per channel is costly; the response curve only depends on acc * inv, so tabulate it.
   const LUT = 1024
@@ -141,8 +171,8 @@ export function rasterize(set: ArcSet, o: RasterOptions): RasterResult {
   for (let t = 0; t <= LUT; t++) lut[t] = 255 * (1 - Math.exp(-o.gain * Math.pow((t / LUT) * 6, o.gamma)))
   const scale = LUT / (6 * ref)
 
-  const px = new Uint8ClampedArray(W * H * 4)
-  for (let p = 0, q = 0; p < W * H; p++, q += 4) {
+  const px = new Uint8ClampedArray(W * bandH * 4)
+  for (let p = from, q = 0; p < to; p++, q += 4) {
     const i = p * 3
     if (o.preserveHue) {
       const m = Math.max(acc[i], acc[i + 1], acc[i + 2])
@@ -159,5 +189,5 @@ export function rasterize(set: ArcSet, o: RasterOptions): RasterResult {
     }
     px[q + 3] = 255
   }
-  return { data: px, width: W, height: H }
+  return { data: px, width: W, height: bandH, top, fullHeight: H }
 }

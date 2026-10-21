@@ -657,3 +657,15 @@ button {
     min-height: 44px;
   }
 }
+
+/* Selection boxes on the book strip: DOM elements so they track the pointer without waiting for a render. */
+.marker {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  pointer-events: none;
+}
+
+.marker.hover {
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
