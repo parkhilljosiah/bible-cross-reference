@@ -551,8 +551,33 @@ main {
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
   }
 
+  /*
+   * Expanded: the sheet takes everything below the book chips and covers the diagram completely. Every item gets an
+   * explicit grid row so the sheet can span the diagram's row and its own without the others being re-placed. The
+   * canvas keeps its size underneath, so expanding and collapsing never re-renders the diagram.
+   */
+  .book-chips {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .arc-wrap {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .sidebar.sheet {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
   .sidebar.sheet.expanded {
-    max-height: 75dvh;
+    grid-row: 2 / 4;
+    max-height: none;
+    position: relative;
+    z-index: 2;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .sheet-toggle {

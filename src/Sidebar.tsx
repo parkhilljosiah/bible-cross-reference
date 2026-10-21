@@ -10,6 +10,9 @@ interface Props {
   onCompare: (selectionBooks: number[], other: number) => void
   onClear: () => void
   onPin: (sel: Selection) => void
+  /** Phone bottom sheet: expanded, it fills the screen below the book chips. Owned by App so the diagram can pause. */
+  expanded: boolean
+  onExpandedChange: (expanded: boolean) => void
   translation: string
   /** A second translation shown beneath the first, or null. */
   compareTranslation: string | null
@@ -19,12 +22,11 @@ interface Props {
 const PAGE = 30
 
 export default function Sidebar({
-  data, ctx, pinned, onCompare, onClear, onPin, translation, compareTranslation, onTranslations,
+  data, ctx, pinned, onCompare, onClear, onPin, expanded, onExpandedChange, translation, compareTranslation, onTranslations,
 }: Props) {
   const [open, setOpen] = useState<number | null>(null)
   const [limit, setLimit] = useState(PAGE)
   // Only used by the mobile bottom sheet.
-  const [expanded, setExpanded] = useState(false)
   const [dragH, setDragH] = useState<number | null>(null)
   const drag = useRef<{ y: number; h: number; moved: boolean } | null>(null)
   const justDragged = useRef(false)
@@ -59,7 +61,7 @@ export default function Sidebar({
       setDragH(null)
       // Dragged most of the way down: dismiss. Otherwise snap to the nearer state.
       if (h < 0.28 * innerHeight) onClear()
-      else setExpanded(h > 0.58 * innerHeight)
+      else onExpandedChange(h > 0.58 * innerHeight)
     },
     onPointerCancel: () => {
       drag.current = null
@@ -170,13 +172,13 @@ export default function Sidebar({
     <aside
       ref={sheetRef}
       className={expanded ? 'sidebar sheet expanded' : 'sidebar sheet'}
-      style={dragH === null ? undefined : { height: dragH, maxHeight: dragH }}
+      style={dragH === null ? undefined : { height: dragH, maxHeight: dragH, alignSelf: 'end' }}
     >
       <button
         className="sheet-toggle"
         aria-expanded={expanded}
         onClick={() => {
-          if (!justDragged.current) setExpanded(!expanded)
+          if (!justDragged.current) onExpandedChange(!expanded)
         }}
         {...sheetHandlers}
       >

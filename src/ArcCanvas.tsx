@@ -41,6 +41,11 @@ interface Props {
   ctx: FilterContext
   pinned: Selection | null
   onPin: (sel: Selection | null) => void
+  /**
+   * True while something opaque covers the whole diagram (the expanded phone sheet). The diagram then stops following
+   * its container's size, so expanding and collapsing doesn't trigger a render nobody can see.
+   */
+  frozen?: boolean
 }
 
 const same = (a: Selection | null, b: Selection | null) => a?.lo === b?.lo && a?.hi === b?.hi
@@ -163,7 +168,7 @@ function paintOverlay(canvas: HTMLCanvasElement, g: Geometry, res: RasterResult 
   if (res) blit(c, dpr, g, res)
 }
 
-export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
+export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const layersRef = useRef<HTMLDivElement>(null)
   const baseRef = useRef<HTMLCanvasElement>(null)
@@ -195,14 +200,18 @@ export default function ArcCanvas({ data, ctx, pinned, onPin }: Props) {
   }, [])
 
   useEffect(() => {
+    // While frozen there is no observer, so the last size is kept; on unfreezing a fresh observer reports the current
+    // size straight away (and nothing re-renders if it is unchanged).
+    if (frozen) return
     const el = wrapRef.current!
     const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect
-      setSize({ w: Math.floor(width), h: Math.floor(height) })
+      const w = Math.floor(entry.contentRect.width)
+      const h = Math.floor(entry.contentRect.height)
+      setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }))
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [frozen])
 
   const usable = Math.max(1, size.w - PAD_X * 2)
   const zoomed = ctx.shown.some((s) => !s)

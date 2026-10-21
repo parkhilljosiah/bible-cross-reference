@@ -14,6 +14,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [pinned, setPinned] = useState<Selection | null>(null)
+  // Phone bottom sheet: expanded, it covers the whole diagram.
+  const [sheetExpanded, setSheetExpanded] = useState(false)
   const [translation, setTranslation] = useState(DEFAULT_TRANSLATION)
   const [compare, setCompare] = useState<string | null>(null)
   const mobile = useMediaQuery(MOBILE_QUERY)
@@ -55,6 +57,12 @@ export default function App() {
   const deferred = useDeferredValue(filters)
   const ctx = useMemo(() => (data ? buildContext(data, deferred) : null), [data, deferred])
 
+  /** Select (or clear) a book or verse range. Clearing also collapses the sheet, so the next selection starts small. */
+  const pin = (sel: Selection | null) => {
+    setPinned(sel)
+    if (!sel) setSheetExpanded(false)
+  }
+
   if (error) return <p className="status">Couldn’t load data: {error}</p>
   if (!data || !ctx) return <p className="status">Loading cross-references…</p>
 
@@ -62,15 +70,23 @@ export default function App() {
     <div className="app">
       <Controls data={data} filters={filters} onChange={setFilters} shown={ctx.links.length} />
       <main>
-        {mobile && <BookChips data={data} ctx={ctx} pinned={pinned} onPin={setPinned} />}
-        <ArcCanvas data={data} ctx={ctx} pinned={pinned} onPin={setPinned} />
+        {mobile && <BookChips data={data} ctx={ctx} pinned={pinned} onPin={pin} />}
+        <ArcCanvas
+          data={data}
+          ctx={ctx}
+          pinned={pinned}
+          onPin={pin}
+          frozen={mobile && sheetExpanded && pinned !== null}
+        />
         <Sidebar
           key={pinned ? `${pinned.lo}-${pinned.hi}` : 'none'}
           data={data}
           ctx={ctx}
           pinned={pinned}
-          onClear={() => setPinned(null)}
-          onPin={setPinned}
+          onClear={() => pin(null)}
+          onPin={pin}
+          expanded={sheetExpanded && pinned !== null}
+          onExpandedChange={setSheetExpanded}
           translation={translation}
           compareTranslation={compare}
           onTranslations={(primary, second) => {

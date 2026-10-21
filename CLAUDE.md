@@ -72,6 +72,13 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   toggling the new selection off (it expires after 400 ms so it can't swallow the next tap); `pointercancel` selects
   nothing; a drag onto the selected book keeps it, a plain tap on it clears it. Drags started on the density bars select a
   verse range instead of a book.
+- **Expanded phone sheet covers the diagram completely.** In the mobile media query the book chips, `.arc-wrap` and the
+  sheet each get an explicit grid row; expanded, the sheet spans rows 2-3 (everything below the chips) at `z-index: 2`.
+  The expanded state lives in `App` (`sheetExpanded`), and `ArcCanvas` gets `frozen` while it is covered: its
+  ResizeObserver is disconnected, so the canvas keeps its size and expanding/collapsing renders nothing (measured: 0
+  renders; without this the row grew to 702 px and forced a re-render each way). Clearing the selection collapses the sheet
+  (`pin(null)` in `App`), so the next selection starts small. The explicit `grid-row`s matter: with the sheet spanning
+  rows, auto-placement would push the diagram into a stray implicit row.
 - **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
   only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
   the worker.
