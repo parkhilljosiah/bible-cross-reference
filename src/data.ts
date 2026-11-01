@@ -166,6 +166,15 @@ export async function loadVerses(d: Data, translation: string, lo: number, hi: n
 const wholeText = new Map<string, Promise<string[]>>()
 
 /**
+ * Drops everything held for a translation: the joined text used for searching and the per-book text used for passages (both
+ * hold the same strings, so releasing memory needs both to go). Reloading later just fetches it again.
+ */
+export function forgetTranslation(translation: string): void {
+  wholeText.delete(translation)
+  for (const key of [...bookText.keys()]) if (key.startsWith(`${translation}/`)) bookText.delete(key)
+}
+
+/**
  * Every verse of a translation, by global index, for text search. The 66 book files are fetched in parallel and kept, so the
  * first search in a translation downloads it (about 1.3 MB compressed) and later ones are instant. `onProgress` gets 0..1.
  */

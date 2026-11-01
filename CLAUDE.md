@@ -110,7 +110,10 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   name goes to the book, with a "Search the text for ..." row offered under it. Matching is by whole words on normalised text
   (lower-case, accents stripped, every non-alphanumeric run = one space, so `man's` is `man s`); default is the exact phrase,
   `qm=words` is all-words-anywhere. The first search per translation downloads all 66 book files in parallel
-  (`loadAllText`, cached) and builds a normalised index once; after that a search is a 10 ms scan. Results are canonical-order
+  (`loadAllText`) and builds a normalised index once; after that a search is a 10 ms scan. Loaded translations live in a 2-entry
+  LRU (`ready` in `useTextSearch.ts`, class in `lruCache.ts`): flipping between two is instant with no "Loading" flash, a third
+  frees the oldest via `forgetTranslation`, which must clear BOTH the joined text and the per-book text (they share strings, so
+  clearing one frees nothing). A freed translation just re-downloads on demand, including for passages. Results are canonical-order
   verses with the match highlighted; hits are also drawn as gold bars in the band under the book strip (`hits` prop on
   `ArcCanvas`, a light direct canvas, not the worker). Results show in the same fixed-height area as the selection sheet, so the
   diagram never resizes; picking a result selects the verse and the header button becomes "← Results". Not done: wildcards,
@@ -183,3 +186,14 @@ found (verify before relying; not legal advice):
 - **Architecture if resumed:** a small serverless proxy (e.g. a Cloudflare Worker) holding the keys, caching within each license,
   capping verses per request; the static site calls only the proxy. Keys never go in the repo. Fall back to the public-domain
   texts when a limit is hit. Open questions for the owner: stays free/ad-free? who creates the accounts and hosts the function?
+
+## Text-search performance (measured; revisit if phones feel slow)
+
+One translation: 4.0 MB of text, **1.25 MB on the wire** (gzip, 66 requests over h2, ~270 ms on a fast connection; ~2 s at 5 Mbps,
+~7 s at 1.5 Mbps by arithmetic). CPU: JSON.parse 3-5 ms; **index build ~45 ms on the main thread (once per translation)**; one
+search 3.5-12 ms (even 24,000 hits: ~4 ms); highlight 40 results < 0.5 ms; first search end to end ~140 ms locally, repeat ~25 ms.
+Memory ~12-13 MB per loaded translation. GitHub Pages serves the data with `max-age=600` and we can't change that. Phone
+numbers are extrapolated (3-6x slower CPU), not measured. Not virtualized: "Show more" costs 20-50 ms per click at 240 rows and
+grows with rows. Options not yet done, in rough order of value: cache the text on the device (service worker / IndexedDB) so
+repeat visits skip the download; move index+search into a worker if a real phone shows a hitch; a prebuilt word index to
+download only the books that contain matches (unproven that it beats 1.25 MB for common words).
