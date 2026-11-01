@@ -25,6 +25,12 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
   press `/` to jump to the box. Suggestions guide you as you type: book names, then a grid of that book's chapters, then a grid of the chapter's verses
   (a chapter or verse that doesn't exist, like `Philippians 5`, is called out with the real ones offered). The result is selected, so you see its text and every
   cross-reference to it; if your filters hide some, it says how many and offers *Show all*.
+- **Word and phrase search:** type words that aren't a book (`son of man`, `lamb of God`, `love`) and press Enter. It
+  matches whole words, ignoring case and punctuation, so `man` does not match `woman`. The default is the exact phrase;
+  *All the words* matches verses that contain every word anywhere. Results use the translation you've chosen (the first search
+  downloads its text, about 1.3 MB; switching translation searches that one). Gold bars under the book strip show where the
+  hits fall; click a result to see its cross-references. A book name still goes to the book (and the dropdown also offers the
+  text search), and anything that looks like a mistyped reference gets a "did you mean" instead.
 - **Zoom and pan:** pinch, trackpad pinch (ctrl+wheel), mouse wheel, drag to pan, `+`/`−` buttons, and *zoom to
   selection*. Up to 400×.
 - **Filters:** between / and book pickers, a minimum-votes slider, *zoom to chosen books*, *Reset all*.
@@ -45,6 +51,8 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 | `zoom` | `1` compresses the baseline to the chosen books | `zoom=1` |
 | `src` | `curated` shows only curated links | `src=curated` |
 | `sel` | Pinned selection: a book, a verse, or a range | `sel=Rev`, `sel=Rev.1.7`, `sel=Ps.22.1-Ps.22.31` |
+| `q` | Word or phrase to search the text for | `q=son+of+man` |
+| `qm` | `words` matches all the words anywhere in a verse (default: exact phrase) | `qm=words` |
 | `tr` | Translation id for passage text (default `KJV`) | `tr=BSB` |
 | `cmp` | A second translation shown beneath the first | `cmp=YLT` |
 
@@ -83,6 +91,7 @@ rest are added as new links.
 | `src/raster.worker.ts`, `src/rasterClient.ts` | Runs the rasterizer off the main thread; newer requests replace queued ones |
 | `src/ArcCanvas.tsx` | Gestures, committed vs. in-flight view (a CSS transform gives instant feedback while the worker re-renders), book strip, density bars |
 | `src/urlState.ts` | Reads and writes the query string |
+| `src/textSearch.ts`, `src/useTextSearch.ts`, `src/TextResults.tsx` | Word/phrase matching (pure, tested), the hook that loads a translation's text and searches it, and the results list |
 | `src/Sidebar.tsx` | Connected books, strongest links, passages, the phone bottom sheet |
 
 ## Deploying

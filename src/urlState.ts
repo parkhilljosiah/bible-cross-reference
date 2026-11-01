@@ -9,12 +9,16 @@ export interface AppState {
   /** Translation shown in the passage panel, and an optional second one shown beneath it. */
   translation: string
   compare: string | null
+  /** A word or phrase being searched for in the text, and how to match several words. */
+  query: string | null
+  queryMode: 'phrase' | 'words'
 }
 
 // ?between=Rev&and=Dan,Ezek&votes=6&zoom=1&src=curated&sel=Rev            (a whole book)
 //                                                       &sel=Rev.1.7       (a verse)
 //                                                       &sel=Ps.22.1-Ps.22.31
 //   &tr=ASV&cmp=BSB   (text translation, and one to compare against)
+//   &q=son+of+man&qm=words   (word search; qm=words matches the words anywhere in a verse)
 
 const verseRef = (d: Data, v: number) => `${d.books[d.bookOf[v]].abbr}.${d.chapterOf[v]}.${d.verseOf[v]}`
 
@@ -43,7 +47,7 @@ function parseBooks(d: Data, value: string | null): number[] {
 /** Returns null when the URL carries no state, so the app keeps its defaults. */
 export function readState(d: Data, search: string): AppState | null {
   const p = new URLSearchParams(search)
-  if (![...p.keys()].some((k) => ['between', 'and', 'votes', 'zoom', 'src', 'sel', 'tr', 'cmp'].includes(k))) return null
+  if (![...p.keys()].some((k) => ['between', 'and', 'votes', 'zoom', 'src', 'sel', 'tr', 'cmp', 'q'].includes(k))) return null
 
   const between = parseBooks(d, p.get('between'))
   const and = parseBooks(d, p.get('and'))
@@ -72,11 +76,13 @@ export function readState(d: Data, search: string): AppState | null {
   const known = (id: string | null) => (id && d.translations.some((t) => t.id === id) ? id : null)
   const translation = known(p.get('tr')) ?? DEFAULT_TRANSLATION
   const cmp = known(p.get('cmp'))
-  return { filters, pinned, translation, compare: cmp && cmp !== translation ? cmp : null }
+  const q = p.get('q')?.trim().slice(0, 100)
+  const queryMode = p.get('qm') === 'words' ? 'words' : 'phrase'
+  return { filters, pinned, translation, compare: cmp && cmp !== translation ? cmp : null, query: q || null, queryMode }
 }
 
 /** Query string (with leading "?", or empty) that reproduces the state; defaults are omitted. */
-export function writeState(d: Data, { filters, pinned, translation, compare }: AppState): string {
+export function writeState(d: Data, { filters, pinned, translation, compare, query, queryMode }: AppState): string {
   const p = new URLSearchParams()
   const abbrs = (list: number[]) => list.map((i) => d.books[i].abbr).join(',')
   if (filters.between.length) p.set('between', abbrs(filters.between))
@@ -98,6 +104,10 @@ export function writeState(d: Data, { filters, pinned, translation, compare }: A
   }
   if (translation !== DEFAULT_TRANSLATION) p.set('tr', translation)
   if (compare) p.set('cmp', compare)
+  if (query) {
+    p.set('q', query)
+    if (queryMode === 'words') p.set('qm', 'words')
+  }
   const s = p.toString().replace(/%2C/g, ',')
   return s ? `?${s}` : ''
 }

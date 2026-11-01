@@ -3,10 +3,13 @@ import ArcCanvas from './ArcCanvas'
 import BookChips from './BookChips'
 import Controls from './Controls'
 import Sidebar from './Sidebar'
+import TextResults from './TextResults'
 import { loadData, type Data } from './data'
 import { DEFAULT_TRANSLATION, readState, writeState } from './urlState'
 import { buildContext, DEFAULT_FILTERS, type Filters, type Selection } from './graph'
+import type { SearchMode } from './textSearch'
 import { MOBILE_QUERY, useMediaQuery } from './useMediaQuery'
+import { useTextSearch } from './useTextSearch'
 import './App.css'
 
 export default function App() {
@@ -18,6 +21,9 @@ export default function App() {
   const [sheetExpanded, setSheetExpanded] = useState(false)
   const [translation, setTranslation] = useState(DEFAULT_TRANSLATION)
   const [compare, setCompare] = useState<string | null>(null)
+  // A word or phrase being searched for in the text, and how several words are matched.
+  const [query, setQuery] = useState<string | null>(null)
+  const [queryMode, setQueryMode] = useState<SearchMode>('phrase')
   const mobile = useMediaQuery(MOBILE_QUERY)
 
   useEffect(() => {
@@ -31,6 +37,8 @@ export default function App() {
           setPinned(shared.pinned)
           setTranslation(shared.translation)
           setCompare(shared.compare)
+          setQuery(shared.query)
+          setQueryMode(shared.queryMode)
         } else {
           // No translation in the link: use the one this reader chose last time.
           try {
@@ -49,13 +57,16 @@ export default function App() {
   useEffect(() => {
     if (!data) return
     const { pathname, hash } = window.location
-    const state = { filters, pinned, translation, compare }
+    const state = { filters, pinned, translation, compare, query, queryMode }
     window.history.replaceState(null, '', `${pathname}${writeState(data, state)}${hash}`)
-  }, [data, filters, pinned, translation, compare])
+  }, [data, filters, pinned, translation, compare, query, queryMode])
 
   // Keeps the slider responsive while a 300k-link redraw catches up.
   const deferred = useDeferredValue(filters)
   const ctx = useMemo(() => (data ? buildContext(data, deferred) : null), [data, deferred])
+
+  // Word search runs over the chosen translation's text; it downloads that text the first time.
+  const textSearch = useTextSearch(data, translation, query, queryMode)
 
   /** Select (or clear) a book or verse range. Clearing also collapses the sheet, so the next selection starts small. */
   const pin = (sel: Selection | null) => {
@@ -74,9 +85,33 @@ export default function App() {
     pin(sel)
   }
 
+  /** Look for a word or phrase in the text. Shows the matches where the selection panel normally is. */
+  const startTextSearch = (text: string) => {
+    setQuery(text)
+    setQueryMode('phrase')
+    pin(null)
+  }
+
+  const onTranslations = (primary: string, second: string | null) => {
+    setTranslation(primary)
+    setCompare(second)
+    try {
+      window.localStorage.setItem('translation', primary)
+    } catch {
+      /* storage unavailable: the choice just won't be remembered */
+    }
+  }
+
   return (
     <div className="app">
-      <Controls data={data} filters={filters} onChange={setFilters} shown={ctx.links.length} onSearch={search} />
+      <Controls
+        data={data}
+        filters={filters}
+        onChange={setFilters}
+        shown={ctx.links.length}
+        onSearch={search}
+        onTextSearch={startTextSearch}
+      />
       <main>
         {mobile && <BookChips data={data} ctx={ctx} pinned={pinned} onPin={pin} />}
         <ArcCanvas
@@ -85,6 +120,7 @@ export default function App() {
           pinned={pinned}
           onPin={pin}
           frozen={mobile && sheetExpanded && pinned !== null}
+          hits={query !== null ? textSearch.hits : null}
         />
         <Sidebar
           key={pinned ? `${pinned.lo}-${pinned.hi}` : 'none'}
@@ -93,20 +129,30 @@ export default function App() {
           pinned={pinned}
           onClear={() => pin(null)}
           onShowAll={() => setFilters({ ...DEFAULT_FILTERS, minVotes: 0 })}
+          results={
+            query !== null ? (
+              <TextResults
+                // A new search, mode or translation starts again from the first page of results.
+                key={`${query}|${queryMode}|${translation}`}
+                data={data}
+                queryText={query}
+                mode={queryMode}
+                onMode={setQueryMode}
+                search={textSearch}
+                translation={translation}
+                compareTranslation={compare}
+                onTranslations={onTranslations}
+                onPick={(v) => pin({ lo: v, hi: v })}
+                onClose={() => setQuery(null)}
+              />
+            ) : null
+          }
           onPin={pin}
           expanded={sheetExpanded && pinned !== null}
           onExpandedChange={setSheetExpanded}
           translation={translation}
           compareTranslation={compare}
-          onTranslations={(primary, second) => {
-            setTranslation(primary)
-            setCompare(second)
-            try {
-              window.localStorage.setItem('translation', primary)
-            } catch {
-              /* storage unavailable: the choice just won't be remembered */
-            }
-          }}
+          onTranslations={onTranslations}
           onCompare={(books, other) => {
             setFilters((f) => ({ ...f, between: books, and: [other], zoom: true }))
           }}

@@ -132,6 +132,16 @@ test('ambiguous and unknown books suggest alternatives', () => {
   assert.match(fails('Phi 3'), /could be Philippians, Philemon/) // prefix shared by two books
 })
 
+test('misspelled book names get a "did you mean"', () => {
+  assert.match(fails('Philipians 4:13'), /Did you mean Philippians/)
+  assert.match(fails('Mathew 5:3'), /Did you mean Matthew/)
+  assert.match(fails('Galations 3:28'), /Did you mean Galatians/)
+  assert.match(fails('1 Thesalonians 4:16'), /Did you mean 1 Thessalonians/)
+  assert.match(fails('Genisis 1:1'), /Did you mean Genesis/)
+  assert.match(fails('Revalation 1:7'), /Did you mean Revelation/)
+  assert.ok(!/Did you mean/.test(fails('Xylophone 3:16')), 'nothing close: no guess')
+})
+
 test('suggestions while typing', () => {
   const names = (input: string) => suggestBooks(input, books).map((b) => b.name)
   assert.equal(names('rev')[0], 'Revelation')

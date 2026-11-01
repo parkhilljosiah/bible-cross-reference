@@ -2,11 +2,14 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { Data } from './data'
 import type { Selection } from './graph'
 import { completeReference, parseReference } from './reference'
+import { parseQuery } from './textSearch'
 
 interface Props {
   data: Data
   /** A valid reference was entered: select it. */
   onSearch: (sel: Selection) => void
+  /** Words or a phrase to look for in the text of the Bible. */
+  onTextSearch: (text: string) => void
 }
 
 interface Option {
@@ -14,6 +17,8 @@ interface Option {
   /** Spans the whole row of the grid (the "whole chapter" choice). */
   wide?: boolean
   choose: () => void
+  /** The "search the text" entry, set apart from the references above it. */
+  kind?: 'text'
 }
 
 /** Columns of the number grid. Must match `.search-options.grid` in App.css; arrow keys move by this much. */
@@ -24,7 +29,7 @@ const COLS = 6
  * then a grid of the book's chapters, then a grid of the chapter's verses. A chapter or verse that does not exist (say
  * "Philippians 5") is called out in the dropdown, with the real ones offered instead.
  */
-export default function SearchBox({ data, onSearch }: Props) {
+export default function SearchBox({ data, onSearch, onTextSearch }: Props) {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [active, setActive] = useState(-1)
@@ -37,9 +42,28 @@ export default function SearchBox({ data, onSearch }: Props) {
     [focused, text, data.books],
   )
 
+  const runTextSearch = (value: string) => {
+    const words = value.trim()
+    if (!parseQuery(words)) {
+      setText(value)
+      setError('Type at least two letters to search the text.')
+      return
+    }
+    setError(null)
+    setActive(-1)
+    onTextSearch(words)
+    inputRef.current?.blur()
+  }
+
   const submit = (value: string) => {
     const r = parseReference(value, data.books)
     if (!r.ok) {
+      // Words with no numbers that do not start with a book ("love", "son of man") are a text search. Anything with
+      // numbers, or a real book, was meant as a reference, so say what is wrong with it.
+      if (r.code === 'no-book' && !/\d/.test(value)) {
+        runTextSearch(value)
+        return
+      }
       setText(value)
       setError(r.error)
       return
@@ -59,8 +83,14 @@ export default function SearchBox({ data, onSearch }: Props) {
       setActive(-1)
       inputRef.current?.focus()
     }
+    // Offered under the books, or alone when the words are not a book, as in a browser's address bar.
+    const words = text.trim()
+    const textRow: Option[] =
+      !/\d/.test(text) && words.length >= 2 && (completion.stage === 'none' || completion.stage === 'book')
+        ? [{ label: `Search the text for “${words}”`, kind: 'text', wide: true, choose: () => runTextSearch(text) }]
+        : []
     if (completion.stage === 'book') {
-      return completion.books.map((b) => ({ label: b.name, choose: () => fill(`${b.name} `) }))
+      return [...completion.books.map((b) => ({ label: b.name, choose: () => fill(`${b.name} `) })), ...textRow]
     }
     if (completion.stage === 'chapter') {
       const { book } = completion
@@ -80,10 +110,10 @@ export default function SearchBox({ data, onSearch }: Props) {
       }))
       return [whole, ...verses]
     }
-    return []
+    return textRow
     // submit only closes over stable setters and `data`, so it is safe to leave out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completion, data.books])
+  }, [completion, data.books, text])
 
   const grid = completion.stage === 'chapter' || completion.stage === 'verse'
   const heading =
@@ -209,7 +239,7 @@ export default function SearchBox({ data, onSearch }: Props) {
                   id={`${listId}-${i}`}
                   role="option"
                   aria-selected={i === active}
-                  className={[i === active ? 'active' : '', o.wide ? 'wide' : ''].filter(Boolean).join(' ') || undefined}
+                  className={[i === active ? 'active' : '', o.wide ? 'wide' : '', o.kind === 'text' ? 'text-row' : ''].filter(Boolean).join(' ') || undefined}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     o.choose()

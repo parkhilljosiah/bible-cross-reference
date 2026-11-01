@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { GENRE_COLORS, KIND_COLORS, loadVerses, rangeLabel, verseLabel, type Data } from './data'
 import { countTouching, linksTouching, type FilterContext, type Selection } from './graph'
 
@@ -11,6 +11,8 @@ interface Props {
   onClear: () => void
   /** Drop every filter that hides cross-references (votes, books, curated-only). */
   onShowAll: () => void
+  /** Text-search results to show while nothing is selected (and to return to from a selected verse), or null. */
+  results: ReactNode
   onPin: (sel: Selection) => void
   /** Phone bottom sheet: expanded, it fills the screen below the book chips. Owned by App so the diagram can pause. */
   expanded: boolean
@@ -24,7 +26,7 @@ interface Props {
 const PAGE = 30
 
 export default function Sidebar({
-  data, ctx, pinned, onCompare, onClear, onShowAll, onPin, expanded, onExpandedChange, translation, compareTranslation, onTranslations,
+  data, ctx, pinned, onCompare, onClear, onShowAll, results, onPin, expanded, onExpandedChange, translation, compareTranslation, onTranslations,
 }: Props) {
   const [open, setOpen] = useState<number | null>(null)
   const [limit, setLimit] = useState(PAGE)
@@ -109,6 +111,7 @@ export default function Sidebar({
   }, [data, ctx, pinned])
 
   if (!pinned || !detail) {
+    if (results) return <aside className="sidebar intro">{results}</aside>
     return (
       <aside className="sidebar intro">
         {topBooks.length > 0 && (
@@ -151,6 +154,10 @@ export default function Sidebar({
             <strong>Hover</strong> to see which book or verses you are over; nothing is drawn until you click.
           </li>
           <li>
+            <strong>Search the text:</strong> type a word or phrase, such as <em>lamb of God</em>, and press Enter. Matching verses
+            are listed, and gold bars under the strip show where they fall.
+          </li>
+          <li>
             Use <strong>Between</strong> and <strong>And</strong> to compare books, such as <em>Revelation</em> with <em>Daniel</em> and <em>Ezekiel</em>.
           </li>
         </ul>
@@ -190,7 +197,7 @@ export default function Sidebar({
       <div className="side-head">
         <h2>{rangeLabel(data, pinned.lo, pinned.hi, true)}</h2>
         <button className="ghost" onClick={onClear}>
-          Clear
+          {results ? '← Results' : 'Clear'}
         </button>
       </div>
       <p className="muted">{total.toLocaleString()} links match the current filters.</p>
@@ -348,20 +355,23 @@ function PassageText({ data, tid, lo, hi }: { data: Data; tid: string; lo: numbe
   )
 }
 
-function TranslationBar({
+export function TranslationBar({
   data,
   translation,
   compareTranslation,
   onChange,
+  hideCompare = false,
 }: {
   data: Data
   translation: string
   compareTranslation: string | null
   onChange: (primary: string, compare: string | null) => void
+  /** Leave out the "Compare with" picker where only one translation is used (the word-search results). */
+  hideCompare?: boolean
 }) {
   const label = (t: { id: string; name: string; year: string }) => `${t.name}${t.year ? ` (${t.year})` : ''}`
   return (
-    <div className="translation-bar">
+    <div className={hideCompare ? 'translation-bar single' : 'translation-bar'}>
       <label>
         <span>Translation</span>
         <select
@@ -378,19 +388,21 @@ function TranslationBar({
           ))}
         </select>
       </label>
-      <label>
-        <span>Compare with</span>
-        <select value={compareTranslation ?? ''} onChange={(e) => onChange(translation, e.target.value || null)}>
-          <option value="">None</option>
-          {data.translations
-            .filter((t) => t.id !== translation)
-            .map((t) => (
-              <option key={t.id} value={t.id}>
-                {label(t)}
-              </option>
-            ))}
-        </select>
-      </label>
+      {!hideCompare && (
+        <label>
+          <span>Compare with</span>
+          <select value={compareTranslation ?? ''} onChange={(e) => onChange(translation, e.target.value || null)}>
+            <option value="">None</option>
+            {data.translations
+              .filter((t) => t.id !== translation)
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {label(t)}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
     </div>
   )
 }

@@ -10,7 +10,13 @@ export interface BookInfo {
   start: number
 }
 
-export type ParseResult = { ok: true; lo: number; hi: number; label: string } | { ok: false; error: string }
+/**
+ * `code` says why a parse failed: 'empty' (nothing typed), 'no-book' (the text does not start with a book, so it may be words to
+ * search for), 'ambiguous' (a prefix of several books) or 'bad-reference' (a real book with numbers that do not work).
+ */
+export type ParseResult =
+  | { ok: true; lo: number; hi: number; label: string }
+  | { ok: false; error: string; code: 'empty' | 'no-book' | 'ambiguous' | 'bad-reference' }
 
 // Alternative spellings per book, keyed by the OpenBible abbreviation. Matching ignores case, spaces and periods, and
 // numbered books also accept "I", "1st" and "First" in front (handled in splitInput). Short forms that would be
@@ -176,19 +182,23 @@ function findBook(input: string, books: readonly BookInfo[]): Found {
 
 /** Turns text such as "John 3:16-18" into a verse range, or says what is wrong with it. */
 export function parseReference(input: string, books: readonly BookInfo[]): ParseResult {
-  if (!input.trim()) return { ok: false, error: 'Type a verse, such as John 3:16.' }
+  if (!input.trim()) return { ok: false, code: 'empty', error: 'Type a verse, such as John 3:16.' }
   const found = findBook(input, books)
   if (found.kind === 'ambiguous') {
     const some = found.hits.slice(0, 4).map((i) => books[i].name).join(', ')
-    return { ok: false, error: `“${input.trim()}” could be ${some}${found.hits.length > 4 ? ', …' : ''}. Add more letters.` }
+    return { ok: false, code: 'ambiguous', error: `“${input.trim()}” could be ${some}${found.hits.length > 4 ? ', …' : ''}. Add more letters.` }
   }
   if (found.kind === 'unknown') {
-    if (!found.letters) return { ok: false, error: 'Start with a book name, such as John 3:16 or Ps 23.' }
+    if (!found.letters) return { ok: false, code: 'no-book', error: 'Start with a book name, such as John 3:16 or Ps 23.' }
     // Offer the closest books by the part we did recognise as a name (digits would otherwise hide every suggestion).
     const { ordinal, letters } = found
-    const guesses = suggestBooks((ordinal ? `${ordinal} ` : '') + letters, books, 4)
+    const guesses = [
+      ...suggestBooks((ordinal ? `${ordinal} ` : '') + letters, books, 4),
+      ...similarBooks(bookKey(ordinal, letters), books, 3),
+    ].filter((b, i, all) => all.indexOf(b) === i).slice(0, 4)
     return {
       ok: false,
+      code: 'no-book',
       error: guesses.length
         ? `No book called “${letters}”. Did you mean ${guesses.map((b) => b.name).join(', ')}?`
         : `No book called “${(ordinal ? ordinal + ' ' : '') + letters}”.`,
@@ -211,7 +221,7 @@ export function parseReference(input: string, books: readonly BookInfo[]): Parse
     c >= 1 && c <= nChapters ? null : single ? `${book.name} has just one chapter.` : `${book.name} has ${plural(nChapters, 'chapter')}.`
   const verseOk = (c: number, v: number): string | null =>
     v >= 1 && v <= book.chapters[c - 1] ? null : `${book.name} ${c} has ${plural(book.chapters[c - 1], 'verse')}.`
-  const fail = (error: string | null): ParseResult | null => (error ? { ok: false, error } : null)
+  const fail = (error: string | null): ParseResult | null => (error ? { ok: false, code: 'bad-reference', error } : null)
 
   if (r === '') return label(book.start, book.start + book.chapters.reduce((a, b) => a + b, 0) - 1, '')
 
@@ -222,7 +232,7 @@ export function parseReference(input: string, books: readonly BookInfo[]): Parse
     const v2 = m[2] ? Number(m[2]) : v1
     const bad = fail(verseOk(1, v1))
     if (bad) return bad
-    if (v2 < v1) return { ok: false, error: 'The range ends before it starts.' }
+    if (v2 < v1) return { ok: false, code: 'bad-reference', error: 'The range ends before it starts.' }
     const end = Math.min(v2, book.chapters[0])
     return label(verseIndex(book, 1, v1), verseIndex(book, 1, end), end === v1 ? ` ${v1}` : ` ${v1}–${end}`)
   }
@@ -239,7 +249,7 @@ export function parseReference(input: string, books: readonly BookInfo[]): Parse
     const c2 = Math.min(Number(m[2]), nChapters)
     const bad = fail(chapterOk(c1))
     if (bad) return bad
-    if (c2 < c1) return { ok: false, error: 'The range ends before it starts.' }
+    if (c2 < c1) return { ok: false, code: 'bad-reference', error: 'The range ends before it starts.' }
     return label(verseIndex(book, c1, 1), verseIndex(book, c2, book.chapters[c2 - 1]), c2 === c1 ? ` ${c1}` : ` ${c1}–${c2}`)
   }
   // One verse: "John 3:16"
@@ -258,7 +268,7 @@ export function parseReference(input: string, books: readonly BookInfo[]): Parse
     const v2 = Number(m[3])
     const bad = fail(chapterOk(c) ?? verseOk(c, v1))
     if (bad) return bad
-    if (v2 < v1) return { ok: false, error: 'The range ends before it starts.' }
+    if (v2 < v1) return { ok: false, code: 'bad-reference', error: 'The range ends before it starts.' }
     const end = Math.min(v2, book.chapters[c - 1])
     return label(verseIndex(book, c, v1), verseIndex(book, c, end), end === v1 ? ` ${c}:${v1}` : ` ${c}:${v1}–${end}`)
   }
@@ -267,11 +277,35 @@ export function parseReference(input: string, books: readonly BookInfo[]): Parse
     const [c1, v1, c2, v2] = m.slice(1).map(Number)
     const bad = fail(chapterOk(c1) ?? verseOk(c1, v1) ?? chapterOk(c2))
     if (bad) return bad
-    if (c2 < c1 || (c2 === c1 && v2 < v1)) return { ok: false, error: 'The range ends before it starts.' }
+    if (c2 < c1 || (c2 === c1 && v2 < v1)) return { ok: false, code: 'bad-reference', error: 'The range ends before it starts.' }
     const end = Math.min(v2, book.chapters[c2 - 1])
     return label(verseIndex(book, c1, v1), verseIndex(book, c2, end), ` ${c1}:${v1} – ${c2}:${end}`)
   }
-  return { ok: false, error: `Couldn't read “${rest}” after ${book.name}. Try ${book.name} ${single ? '5' : '3:16'} or ${book.name}${single ? '' : ' 3'}.` }
+  return { ok: false, code: 'bad-reference', error: `Couldn't read “${rest}” after ${book.name}. Try ${book.name} ${single ? '5' : '3:16'} or ${book.name}${single ? '' : ' 3'}.` }
+}
+
+/** Number of single-letter edits (insert, delete, change) to turn one string into the other. */
+function editDistance(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i]
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    }
+    prev = row
+  }
+  return prev[b.length]
+}
+
+/** Books whose names are a typo or two away from what was typed ("Philipians" -> Philippians), closest first. */
+function similarBooks(k: string, books: readonly BookInfo[], limit: number): BookInfo[] {
+  const allowed = k.length >= 5 ? 2 : 1
+  return books
+    .map((b, i) => ({ b, i, d: editDistance(k, key(b.name)) }))
+    .filter((x) => x.d <= allowed)
+    .sort((x, y) => x.d - y.d || x.i - y.i)
+    .slice(0, limit)
+    .map((x) => x.b)
 }
 
 /** Books matching what has been typed so far, for the suggestion list. Empty once chapter numbers appear. */

@@ -46,6 +46,8 @@ interface Props {
    * its container's size, so expanding and collapsing doesn't trigger a render nobody can see.
    */
   frozen?: boolean
+  /** Verse indices matching a word search; drawn as bars under the book strip so you can see where they fall. */
+  hits?: Uint32Array | null
 }
 
 const same = (a: Selection | null, b: Selection | null) => a?.lo === b?.lo && a?.hi === b?.hi
@@ -168,11 +170,12 @@ function paintOverlay(canvas: HTMLCanvasElement, g: Geometry, res: RasterResult 
   if (res) blit(c, dpr, g, res)
 }
 
-export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: Props) {
+export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false, hits = null }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const layersRef = useRef<HTMLDivElement>(null)
   const baseRef = useRef<HTMLCanvasElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
+  const hitsRef = useRef<HTMLCanvasElement>(null)
   const baseClient = useRef<RasterClient | null>(null)
   const overlayClient = useRef<RasterClient | null>(null)
 
@@ -415,6 +418,29 @@ export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: 
     }
   }, [data, ctx, layout, geo, size, pinned])
 
+  // Word-search hits: one bar per pixel column in the band under the book strip, like the link-density bars above it.
+  // A few thousand rectangles at most, so this is drawn directly rather than through the worker.
+  useEffect(() => {
+    const canvas = hitsRef.current
+    if (!canvas || size.w <= 0 || size.h <= 0) return
+    const { c, dpr } = sizeCanvas(canvas, geo)
+    if (!hits || hits.length === 0) return
+    c.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const columns = new Float32Array(Math.ceil(geo.w) + 1)
+    for (const v of hits) {
+      const x = layout.verseX(v)
+      if (x >= 0 && x <= geo.w) columns[Math.round(x)]++
+    }
+    let max = 1
+    for (const n of columns) max = Math.max(max, n)
+    const top = geo.baseY + 2 + BOOK_H + DENSITY_GAP
+    const width = Math.max(2, layout.ppv)
+    c.fillStyle = '#ffd166'
+    for (let x = 0; x < columns.length; x++) {
+      if (columns[x]) c.fillRect(x - width / 2, top, width, Math.max(3, Math.sqrt(columns[x] / max) * DENSITY_H))
+    }
+  }, [hits, layout, geo, size])
+
   // ---- pointer input ------------------------------------------------------------------------------
 
   const locate = (clientX: number, clientY: number, rect: DOMRect): Selection | null => {
@@ -629,6 +655,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: 
           aria-hidden="true"
           style={{ cursor: hover ? 'pointer' : 'default' }}
         />
+        <canvas ref={hitsRef} className="layer hits" aria-hidden="true" />
         {pinned && <div className="marker pinned" style={markerBox(pinned)} />}
         {hover && !same(hover, pinned) && <div className="marker hover" style={markerBox(hover)} />}
       </div>

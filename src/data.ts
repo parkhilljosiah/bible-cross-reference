@@ -163,6 +163,30 @@ export async function loadVerses(d: Data, translation: string, lo: number, hi: n
 }
 
 /** "Rev 1:7", or with `full` "Revelation 1:7". */
+const wholeText = new Map<string, Promise<string[]>>()
+
+/**
+ * Every verse of a translation, by global index, for text search. The 66 book files are fetched in parallel and kept, so the
+ * first search in a translation downloads it (about 1.3 MB compressed) and later ones are instant. `onProgress` gets 0..1.
+ */
+export function loadAllText(d: Data, translation: string, onProgress?: (done: number) => void): Promise<string[]> {
+  let p = wholeText.get(translation)
+  if (!p) {
+    let loaded = 0
+    p = Promise.all(
+      d.books.map((b) =>
+        loadBookText(translation, b.abbr).then((v) => {
+          onProgress?.(++loaded / d.books.length)
+          return v
+        }),
+      ),
+    ).then((perBook) => perBook.flat())
+    p.catch(() => wholeText.delete(translation)) // allow a retry after a network failure
+    wholeText.set(translation, p)
+  }
+  return p
+}
+
 export function verseLabel(d: Data, v: number, full = false): string {
   const book = d.books[d.bookOf[v]]
   return `${full ? book.name : book.abbr} ${d.chapterOf[v]}:${d.verseOf[v]}`

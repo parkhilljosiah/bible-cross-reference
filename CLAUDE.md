@@ -104,6 +104,17 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   highlighted (otherwise they are the text cursor). The popup is positioned against the input alone so it never covers Go, and
   cancels `mousedown` so the input keeps focus (blur would close it before a tap lands). `findBook` is shared by parsing and
   completion; both are covered by `tests/reference.test.ts`.
+- **Word/phrase search** (`textSearch.ts` pure + tested, `useTextSearch.ts`, `TextResults.tsx`, row in `SearchBox.tsx`): one box,
+  routed by `parseReference`'s failure `code`. A parse that fails with `no-book` and has no digits is a text search; a real book
+  with bad numbers, or anything with digits, stays a reference error ("did you mean", now typo-tolerant via edit distance); a book
+  name goes to the book, with a "Search the text for ..." row offered under it. Matching is by whole words on normalised text
+  (lower-case, accents stripped, every non-alphanumeric run = one space, so `man's` is `man s`); default is the exact phrase,
+  `qm=words` is all-words-anywhere. The first search per translation downloads all 66 book files in parallel
+  (`loadAllText`, cached) and builds a normalised index once; after that a search is a 10 ms scan. Results are canonical-order
+  verses with the match highlighted; hits are also drawn as gold bars in the band under the book strip (`hits` prop on
+  `ArcCanvas`, a light direct canvas, not the worker). Results show in the same fixed-height area as the selection sheet, so the
+  diagram never resizes; picking a result selects the verse and the header button becomes "← Results". Not done: wildcards,
+  searching two translations at once, remembering the results scroll position when coming back from a verse.
 - **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
   only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
   the worker.

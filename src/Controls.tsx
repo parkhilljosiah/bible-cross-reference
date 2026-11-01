@@ -9,9 +9,10 @@ interface Props {
   onChange: (f: Filters) => void
   shown: number
   onSearch: (sel: Selection) => void
+  onTextSearch: (text: string) => void
 }
 
-export default function Controls({ data, filters, onChange, shown, onSearch }: Props) {
+export default function Controls({ data, filters, onChange, shown, onSearch, onTextSearch }: Props) {
   // Only meaningful on small screens, where the filter fields collapse behind a button.
   const [open, setOpen] = useState(false)
   const active = filters.between.length > 0 || filters.and.length > 0
@@ -57,7 +58,7 @@ export default function Controls({ data, filters, onChange, shown, onSearch }: P
         </button>
       </div>
 
-      <SearchBox data={data} onSearch={onSearch} />
+      <SearchBox data={data} onSearch={onSearch} onTextSearch={onTextSearch} />
 
       <div id="filter-fields" className={open ? 'filters open' : 'filters'}>
         <BookPicker
