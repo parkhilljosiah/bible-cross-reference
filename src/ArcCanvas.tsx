@@ -182,6 +182,9 @@ export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: 
   const pointerRef = useRef({ x: 0, y: 0 })
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [overlayBusy, setOverlayBusy] = useState(false)
+  // The base picture dims only once the highlight over it has been painted. Dimming first left a dark gap while the
+  // worker rendered, and a selection with no visible arcs would dim the picture for nothing.
+  const [dimmed, setDimmed] = useState(false)
   const [view, setView] = useState<View>(IDENTITY_VIEW)
   const [busy, setBusy] = useState(false)
 
@@ -374,6 +377,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: 
     if (!pinned) {
       sizeCanvas(canvas, geo)
       setOverlayBusy(false)
+      setDimmed(false)
       return
     }
     const ids = linksTouching(data, ctx, pinned.lo, pinned.hi)
@@ -404,6 +408,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: 
       if (stale || !res) return
       paintOverlay(canvas, geo, res)
       setOverlayBusy(false)
+      setDimmed(res.height > 0)
     })
     return () => {
       stale = true
@@ -611,7 +616,7 @@ export default function ArcCanvas({ data, ctx, pinned, onPin, frozen = false }: 
         onPin(target && !same(target, pinned) ? target : null)
       }}
     >
-      <div ref={layersRef} className={pinned ? 'layers has-selection' : 'layers'}>
+      <div ref={layersRef} className={dimmed ? 'layers has-selection' : 'layers'}>
         <canvas
           ref={baseRef}
           className="layer base"

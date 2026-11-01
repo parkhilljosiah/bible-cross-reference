@@ -66,9 +66,17 @@ export default function App() {
   if (error) return <p className="status">Couldn’t load data: {error}</p>
   if (!data || !ctx) return <p className="status">Loading cross-references…</p>
 
+  /** A searched verse, chapter or book. It is a question about the whole Bible, so lift a book filter that would hide it. */
+  const search = (sel: Selection) => {
+    if (!ctx.shown[data.bookOf[sel.lo]] || !ctx.shown[data.bookOf[sel.hi]]) {
+      setFilters((f) => ({ ...f, between: [], and: [], zoom: false }))
+    }
+    pin(sel)
+  }
+
   return (
     <div className="app">
-      <Controls data={data} filters={filters} onChange={setFilters} shown={ctx.links.length} />
+      <Controls data={data} filters={filters} onChange={setFilters} shown={ctx.links.length} onSearch={search} />
       <main>
         {mobile && <BookChips data={data} ctx={ctx} pinned={pinned} onPin={pin} />}
         <ArcCanvas
@@ -84,6 +92,7 @@ export default function App() {
           ctx={ctx}
           pinned={pinned}
           onClear={() => pin(null)}
+          onShowAll={() => setFilters({ ...DEFAULT_FILTERS, minVotes: 0 })}
           onPin={pin}
           expanded={sheetExpanded && pinned !== null}
           onExpandedChange={setSheetExpanded}

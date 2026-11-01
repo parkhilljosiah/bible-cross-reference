@@ -162,17 +162,20 @@ export async function loadVerses(d: Data, translation: string, lo: number, hi: n
   return out
 }
 
-export function verseLabel(d: Data, v: number): string {
-  return `${d.books[d.bookOf[v]].abbr} ${d.chapterOf[v]}:${d.verseOf[v]}`
+/** "Rev 1:7", or with `full` "Revelation 1:7". */
+export function verseLabel(d: Data, v: number, full = false): string {
+  const book = d.books[d.bookOf[v]]
+  return `${full ? book.name : book.abbr} ${d.chapterOf[v]}:${d.verseOf[v]}`
 }
 
-/** "Rev 13:1–5" style label for a contiguous verse range. */
-export function rangeLabel(d: Data, lo: number, hi: number): string {
+/** "Rev 13:1–5" style label for a contiguous verse range ("Revelation 13:1–5" with `full`). */
+export function rangeLabel(d: Data, lo: number, hi: number, full = false): string {
   const bLo = d.bookOf[lo]
-  if (lo === hi) return verseLabel(d, lo)
-  if (bLo !== d.bookOf[hi]) return `${verseLabel(d, lo)} – ${verseLabel(d, hi)}`
+  if (lo === hi) return verseLabel(d, lo, full)
+  if (bLo !== d.bookOf[hi]) return `${verseLabel(d, lo, full)} – ${verseLabel(d, hi, full)}`
   const book = d.books[bLo]
   if (lo === book.start && hi === book.start + book.count - 1) return book.name
-  if (d.chapterOf[lo] === d.chapterOf[hi]) return `${book.abbr} ${d.chapterOf[lo]}:${d.verseOf[lo]}–${d.verseOf[hi]}`
-  return `${book.abbr} ${d.chapterOf[lo]}:${d.verseOf[lo]} – ${d.chapterOf[hi]}:${d.verseOf[hi]}`
+  const name = full ? book.name : book.abbr
+  if (d.chapterOf[lo] === d.chapterOf[hi]) return `${name} ${d.chapterOf[lo]}:${d.verseOf[lo]}–${d.verseOf[hi]}`
+  return `${name} ${d.chapterOf[lo]}:${d.verseOf[lo]} – ${d.chapterOf[hi]}:${d.verseOf[hi]}`
 }

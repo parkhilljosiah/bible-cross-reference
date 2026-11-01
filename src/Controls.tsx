@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import type { Data } from './data'
-import { DEFAULT_FILTERS, type Filters } from './graph'
+import { DEFAULT_FILTERS, type Filters, type Selection } from './graph'
+import SearchBox from './SearchBox'
 
 interface Props {
   data: Data
   filters: Filters
   onChange: (f: Filters) => void
   shown: number
+  onSearch: (sel: Selection) => void
 }
 
-export default function Controls({ data, filters, onChange, shown }: Props) {
+export default function Controls({ data, filters, onChange, shown, onSearch }: Props) {
   // Only meaningful on small screens, where the filter fields collapse behind a button.
   const [open, setOpen] = useState(false)
   const active = filters.between.length > 0 || filters.and.length > 0
@@ -54,6 +56,8 @@ export default function Controls({ data, filters, onChange, shown }: Props) {
           Filters{chosen > 0 ? ` (${chosen})` : ''}
         </button>
       </div>
+
+      <SearchBox data={data} onSearch={onSearch} />
 
       <div id="filter-fields" className={open ? 'filters open' : 'filters'}>
         <BookPicker

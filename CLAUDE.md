@@ -15,7 +15,9 @@ npm run lint         # oxlint
 node scripts/build-data.mjs   # regenerate public/data (needs data/raw/, see below)
 ```
 
-There are **no automated tests**. Verify changes with `npx tsc -b`, `npm run lint`, and the browser.
+Tests: `npm test` runs `tests/*.test.ts` with Node's built-in runner (Node strips the types itself; no framework). They cover
+the reference parser only. For everything else verify with `npx tsc -b`, `npm run lint`, and the browser. CI runs lint, tests
+and build before deploying.
 
 ## Architecture (src/)
 
@@ -79,6 +81,20 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   renders; without this the row grew to 702 px and forced a re-render each way). Clearing the selection collapses the sheet
   (`pin(null)` in `App`), so the next selection starts small. The explicit `grid-row`s matter: with the sheet spanning
   rows, auto-placement would push the diagram into a stray implicit row.
+- **Verse search** (`reference.ts` parser, `SearchBox.tsx`): pure, tested parser turns "John 3:16", "1 Cor 13:4-7", "Ps 23",
+  "Jude 5" (lone number in a one-chapter book = verse), "Gen 1:31-2:3", a bare book name, etc. into a verse range; unknown or
+  out-of-range input gets a specific message ("John 3 has 36 verses."), ambiguous short forms ("Jo") get "did you mean". Over-long
+  ends are clamped. A result is just a selection (`pin`), so the sidebar's strongest links *are* the cross-reference list, and it
+  is shareable via `sel=`. A search lifts book filters/zoom that would hide the verse but leaves vote/curated filters alone; the
+  sidebar counts what they hide (`countTouching`) and offers "Show all". Known gap: the OpenBible data anchors a cross-reference
+  to a *range* at its first verse, so a verse in the middle of a referenced range (e.g. Prov 8:25 inside 8:22-30) won't list it.
+- **Selecting must not resize the diagram.** On phones the area under the diagram holds the "Top connected books" list when
+  nothing is selected and the sheet when something is; both are `42dvh` tall (`.sidebar.intro`, `.sidebar.sheet`; expanded
+  uses `height: auto`). When they differed (48 vs 42), every search or clear resized the canvas, which re-rendered both layers
+  ~70 ms later (longer on a real phone) and visibly reshaped the picture, with the highlight painted twice. Also, the base
+  layer dims only after the highlight has painted (`dimmed` state in `ArcCanvas`, and not at all when the selection has no
+  visible arcs); dimming on selection made a dark gap while the worker rendered. Measure with a drawImage hook on the base and
+  overlay canvases plus a ResizeObserver on `.arc-wrap`: a search should show one overlay paint, the dim, and no resize.
 - **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
   only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
   the worker.
@@ -128,3 +144,21 @@ GitHub Pages via `.github/workflows/deploy.yml` (lint, build, upload, deploy on 
   are confirmed.
 - Possible: PWA manifest/Home Screen mode, a LICENSE file, tests for `graph.ts`/`urlState.ts`/the build script,
   top book *pairs* instead of single books in the phone list.
+
+## On hold: copyrighted translations (ESV, NIV, NASB, NLT)
+
+Paused by the owner until licensing is sorted out. **Nothing for this is built**; only the seven public-domain texts ship. What was
+found (verify before relying; not legal advice):
+
+- **ESV:** Crossway's own API (api.esv.org). Non-commercial only (no ads, sponsorship, donations or charging), doctrinal-fit
+  condition, key by approval, **server-side only** (the key may not be published), 5,000 queries/day, 1,000/hour, 60/minute,
+  max 500 verses or half a book per page and per query, may store up to that much, attribution and a link to esv.org required.
+- **NIV:** Biblica. API.Bible offers no express licensing for it; contact Biblica (biblica.com permissions). Free non-commercial
+  access via API.Bible was not confirmed.
+- **NASB / NLT:** named in API.Bible's catalog, but whether the free Starter plan can add them (or they need a direct agreement
+  with Lockman / Tyndale) can only be seen in an account's dashboard.
+- **API.Bible Starter:** non-commercial, up to **3** licensed Bibles (so not all of NIV/NASB/NLT plus ESV), 5,000 calls/month, a
+  FUMS tracking script is required on web apps, cache refresh every 14-30 days, copyright text on every display.
+- **Architecture if resumed:** a small serverless proxy (e.g. a Cloudflare Worker) holding the keys, caching within each license,
+  capping verses per request; the static site calls only the proxy. Keys never go in the repo. Fall back to the public-domain
+  texts when a limit is hit. Open questions for the owner: stays free/ad-free? who creates the accounts and hosts the function?

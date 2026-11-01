@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GENRE_COLORS, KIND_COLORS, loadVerses, rangeLabel, verseLabel, type Data } from './data'
-import { linksTouching, type FilterContext, type Selection } from './graph'
+import { countTouching, linksTouching, type FilterContext, type Selection } from './graph'
 
 interface Props {
   data: Data
@@ -9,6 +9,8 @@ interface Props {
   /** Narrow the diagram to links between the selection's books and `other`. */
   onCompare: (selectionBooks: number[], other: number) => void
   onClear: () => void
+  /** Drop every filter that hides cross-references (votes, books, curated-only). */
+  onShowAll: () => void
   onPin: (sel: Selection) => void
   /** Phone bottom sheet: expanded, it fills the screen below the book chips. Owned by App so the diagram can pause. */
   expanded: boolean
@@ -22,7 +24,7 @@ interface Props {
 const PAGE = 30
 
 export default function Sidebar({
-  data, ctx, pinned, onCompare, onClear, onPin, expanded, onExpandedChange, translation, compareTranslation, onTranslations,
+  data, ctx, pinned, onCompare, onClear, onShowAll, onPin, expanded, onExpandedChange, translation, compareTranslation, onTranslations,
 }: Props) {
   const [open, setOpen] = useState<number | null>(null)
   const [limit, setLimit] = useState(PAGE)
@@ -86,7 +88,7 @@ export default function Sidebar({
     }
     const top = [...perBook].sort((x, y) => y[1] - x[1]).slice(0, 8)
     const selBooks = [...new Set([data.bookOf[pinned.lo], data.bookOf[pinned.hi]])]
-    return { total: ids.length, sorted, top, selBooks, inside }
+    return { total: ids.length, hidden: countTouching(data, pinned.lo, pinned.hi) - ids.length, sorted, top, selBooks, inside }
   }, [data, ctx, pinned])
 
   // Busiest books under the current filters; shown on phones, where the intro text is hidden.
@@ -165,7 +167,7 @@ export default function Sidebar({
     )
   }
 
-  const { total, sorted, top, selBooks, inside } = detail
+  const { total, hidden, sorted, top, selBooks, inside } = detail
   const shownLinks = sorted.slice(0, limit)
 
   return (
@@ -186,18 +188,38 @@ export default function Sidebar({
         {expanded ? 'Collapse' : 'Expand'}
       </button>
       <div className="side-head">
-        <h2>{rangeLabel(data, pinned.lo, pinned.hi)}</h2>
+        <h2>{rangeLabel(data, pinned.lo, pinned.hi, true)}</h2>
         <button className="ghost" onClick={onClear}>
           Clear
         </button>
       </div>
       <p className="muted">{total.toLocaleString()} links match the current filters.</p>
+      {hidden > 0 && (
+        <p className="hidden-note">
+          {hidden.toLocaleString()} more {hidden === 1 ? 'cross-reference is' : 'cross-references are'} hidden by your
+          filters.{' '}
+          <button className="text-btn" onClick={onShowAll}>
+            Show all
+          </button>
+        </p>
+      )}
       <TranslationBar
         data={data}
         translation={translation}
         compareTranslation={compareTranslation}
         onChange={onTranslations}
       />
+      {/* For a verse, a few verses or a short chapter, show what was selected before the links to it. */}
+      {pinned.hi - pinned.lo < 6 && (
+        <div className="selected-passage">
+          {([translation, compareTranslation].filter(Boolean) as string[]).map((tid, _i, all) => (
+            <p key={tid}>
+              {all.length > 1 && <span className="tr-tag">{tid}</span>}
+              <PassageText key={`${tid}-${pinned.lo}-${pinned.hi}`} data={data} tid={tid} lo={pinned.lo} hi={pinned.hi} />
+            </p>
+          ))}
+        </div>
+      )}
 
       {top.length > 0 && (
         <section>

@@ -84,6 +84,20 @@ export function linksTouching(d: Data, ctx: FilterContext, lo: number, hi: numbe
   return out
 }
 
+/** How many links touch the verse range [lo, hi], whatever the filters say. */
+export function countTouching(d: Data, lo: number, hi: number): number {
+  let n = 0
+  for (let v = lo; v <= hi; v++) {
+    for (let k = d.adjStart[v]; k < d.adjStart[v + 1]; k++) {
+      const e = d.adj[k]
+      const other = d.a[e] === v ? d.b[e] : d.a[e]
+      if (other >= lo && other <= hi && other < v) continue // both ends inside: counted from the first
+      n++
+    }
+  }
+  return n
+}
+
 /** Horizontal zoom of the baseline: k >= 1, off = pixels scrolled from the left edge. */
 export interface View {
   k: number

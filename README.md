@@ -11,6 +11,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # static site in dist/
 npm run lint
+npm test           # parser tests (Node runs the TypeScript directly; no test framework)
 ```
 
 To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the printed `Network:` URL.
@@ -18,6 +19,9 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 ## Features
 
 - **Arc overview** of ~300k links, rendered with additive blending in a Web Worker (the page never blocks).
+- **Search:** type a reference (`John 3:16`, `jn 3.16`, `1 Cor 13:4-7`, `Ps 23`, `Jude 5`, `Rev`) and press Enter, or
+  press `/` to jump to the box. Book names are suggested as you type. The result is selected, so you see its text and every
+  cross-reference to it; if your filters hide some, it says how many and offers *Show all*.
 - **Zoom and pan:** pinch, trackpad pinch (ctrl+wheel), mouse wheel, drag to pan, `+`/`−` buttons, and *zoom to
   selection*. Up to 400×.
 - **Filters:** between / and book pickers, a minimum-votes slider, *zoom to chosen books*, *Reset all*.
