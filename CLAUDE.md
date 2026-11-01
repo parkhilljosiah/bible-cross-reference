@@ -95,6 +95,15 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   layer dims only after the highlight has painted (`dimmed` state in `ArcCanvas`, and not at all when the selection has no
   visible arcs); dimming on selection made a dark gap while the worker rendered. Measure with a drawImage hook on the base and
   overlay canvases plus a ResizeObserver on `.arc-wrap`: a search should show one overlay paint, the dim, and no resize.
+- **Search completion** (`completeReference` in `reference.ts`, UI in `SearchBox.tsx`): the dropdown is staged. Books while the name
+  is being typed; once the name is complete and followed by a space or number, a grid of chapters; a chapter that can only mean one
+  thing (or `john 3:`) moves on to a grid of verses with a full-width "Whole chapter" entry. Typed digits filter by prefix (`ps 15`
+  -> 15, 150). A number that doesn't exist (`Philippians 5`, `John 3:99`) returns a hint ("Philippians has 4 chapters.") plus the
+  real options instead of an empty list; a failed Enter shows the same message in the dropdown (red) and keeps it open. One-chapter
+  books skip the chapter step. Arrow keys move by `COLS` (6, must match the CSS grid), left/right only once an entry is
+  highlighted (otherwise they are the text cursor). The popup is positioned against the input alone so it never covers Go, and
+  cancels `mousedown` so the input keeps focus (blur would close it before a tap lands). `findBook` is shared by parsing and
+  completion; both are covered by `tests/reference.test.ts`.
 - **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
   only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
   the worker.

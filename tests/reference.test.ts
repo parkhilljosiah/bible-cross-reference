@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { parseReference, suggestBooks, type BookInfo } from '../src/reference.ts'
+import { completeReference, parseReference, suggestBooks, type BookInfo } from '../src/reference.ts'
 
 const books: BookInfo[] = JSON.parse(readFileSync(new URL('../public/data/books.json', import.meta.url), 'utf8'))
 const total = books.reduce((n, b) => n + b.count, 0)
@@ -143,4 +143,102 @@ test('suggestions while typing', () => {
   assert.deepEqual(names(''), [])
   assert.deepEqual(names('john 3'), [], 'no suggestions once a chapter is being typed')
   assert.ok(names('s').length <= 6)
+})
+
+// ---- completion: what to offer as a reference is typed ----
+
+const nums = (n: number) => Array.from({ length: n }, (_, i) => i + 1)
+
+test('completion: a book name, then its chapters, then the verses', () => {
+  let c = completeReference('john', books)
+  assert.equal(c.stage, 'book')
+  assert.equal(c.stage === 'book' && c.books[0].name, 'John')
+
+  c = completeReference('john ', books) // a space after the name moves on to chapters
+  assert.equal(c.stage, 'chapter')
+  assert.deepEqual(c.stage === 'chapter' && c.chapters, nums(21))
+  assert.equal(c.stage === 'chapter' && c.hint, null)
+
+  c = completeReference('john 3:', books)
+  assert.equal(c.stage, 'verse')
+  assert.deepEqual(c.stage === 'verse' && c.verses, nums(36))
+  assert.equal(c.stage === 'verse' && c.chapter, 3)
+})
+
+test('completion: typed digits narrow the list', () => {
+  let c = completeReference('john 2', books) // 2, 20 and 21 all start with 2
+  assert.deepEqual(c.stage === 'chapter' && c.chapters, [2, 20, 21])
+
+  c = completeReference('john 3', books) // only chapter 3 starts with 3: go straight to its verses
+  assert.equal(c.stage, 'verse')
+  assert.equal(c.stage === 'verse' && c.chapter, 3)
+
+  c = completeReference('john 3:1', books) // verses starting with 1: 1, 10-19
+  assert.deepEqual(c.stage === 'verse' && c.verses, [1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+
+  c = completeReference('ps 15', books) // 15 and 150
+  assert.deepEqual(c.stage === 'chapter' && c.chapters, [15, 150])
+  c = completeReference('ps 150', books)
+  assert.equal(c.stage === 'verse' && c.chapter, 150)
+  assert.deepEqual(c.stage === 'verse' && c.verses, nums(6))
+})
+
+test('completion: the same shapes people type are understood', () => {
+  for (const input of ['John 3.', 'John 3 :', 'john 3 ', 'John 3:']) {
+    const c = completeReference(input, books)
+    assert.equal(c.stage, 'verse', input)
+    assert.equal(c.stage === 'verse' && c.chapter, 3, input)
+  }
+  assert.equal(completeReference('1 cor ', books).stage, 'chapter')
+  assert.equal(completeReference('Song of Solomon ', books).stage, 'chapter')
+})
+
+test('completion: a chapter that does not exist says so and offers the real ones', () => {
+  const c = completeReference('Philippians 5', books)
+  assert.equal(c.stage, 'chapter')
+  assert.equal(c.stage === 'chapter' && c.hint, 'Philippians has 4 chapters.')
+  assert.deepEqual(c.stage === 'chapter' && c.chapters, [1, 2, 3, 4])
+
+  const withColon = completeReference('Philippians 5:', books)
+  assert.equal(withColon.stage === 'chapter' && withColon.hint, 'Philippians has 4 chapters.')
+
+  assert.equal(completeReference('Genesis 51', books).stage === 'chapter' && completeReference('Genesis 51', books).hint, 'Genesis has 50 chapters.')
+  assert.equal(completeReference('Psalms 151', books).stage === 'chapter' && completeReference('Psalms 151', books).hint, 'Psalms has 150 chapters.')
+})
+
+test('completion: a verse that does not exist says so and offers the real ones', () => {
+  const c = completeReference('John 3:99', books)
+  assert.equal(c.stage, 'verse')
+  assert.equal(c.stage === 'verse' && c.hint, 'John 3 has 36 verses.')
+  assert.deepEqual(c.stage === 'verse' && c.verses, nums(36))
+})
+
+test('completion: one-chapter books go straight to verses', () => {
+  let c = completeReference('jude ', books)
+  assert.equal(c.stage, 'verse')
+  assert.deepEqual(c.stage === 'verse' && c.verses, nums(25))
+  assert.equal(c.stage === 'verse' && c.chapter, 1)
+
+  c = completeReference('jude 30', books)
+  assert.equal(c.stage === 'verse' && c.hint, 'Jude has 25 verses.')
+
+  c = completeReference('3 John 1', books) // 3 John has 14 verses: 1, 10-14
+  assert.deepEqual(c.stage === 'verse' && c.verses, [1, 10, 11, 12, 13, 14])
+  c = completeReference('Jude 1:5', books) // an explicit chapter 1 is fine too
+  assert.equal(c.stage === 'verse' && c.verses.includes(5), true)
+})
+
+test('completion: nothing is offered when there is nothing to offer', () => {
+  assert.equal(completeReference('', books).stage, 'none')
+  assert.equal(completeReference('xyz', books).stage, 'none')
+  assert.equal(completeReference('john 3:16-', books).stage, 'none') // a range is being typed by hand
+  assert.equal(completeReference('john banana', books).stage, 'none')
+})
+
+test('completion agrees with the parser: every offered verse of John 3 parses', () => {
+  const c = completeReference('john 3:', books)
+  assert.equal(c.stage, 'verse')
+  if (c.stage !== 'verse') return
+  for (const v of c.verses) assert.ok(parseReference(`John 3:${v}`, books).ok, `John 3:${v}`)
+  assert.ok(!parseReference(`John 3:${c.verses.length + 1}`, books).ok)
 })

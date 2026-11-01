@@ -148,36 +148,44 @@ function verseIndex(b: BookInfo, chapter: number, verse: number): number {
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
+type Found =
+  | { kind: 'book'; bi: number; rest: string }
+  | { kind: 'ambiguous'; hits: number[] }
+  | { kind: 'unknown'; ordinal: number; letters: string }
+
+/** Which book the text starts with, and what follows it. Shared by parsing and by completion. */
+function findBook(input: string, books: readonly BookInfo[]): Found {
+  const { ordinal, letters, words, rest: afterBook } = splitInput(input)
+  if (!letters) return { kind: 'unknown', ordinal, letters }
+  const { exact, names } = indexOf(books)
+  // Longest run of leading words that names a book ("Song of Solomon"); any words left over stay in `rest`
+  // ("John banana" is John followed by something unreadable, not a book called johnbanana).
+  for (let n = words.length; n >= 1; n--) {
+    const hit = exact.get(bookKey(ordinal, words.slice(0, n).join('')))
+    if (hit !== undefined) return { kind: 'book', bi: hit, rest: [...words.slice(n), afterBook].join(' ').trim() }
+  }
+  if (letters.length >= 3) {
+    // A unique prefix of a full name works too ("revel", "phili"); several matches means we should ask.
+    const k = bookKey(ordinal, letters)
+    const hits = names.flatMap((n, i) => (n.startsWith(k) ? [i] : []))
+    if (hits.length === 1) return { kind: 'book', bi: hits[0], rest: afterBook }
+    if (hits.length > 1) return { kind: 'ambiguous', hits }
+  }
+  return { kind: 'unknown', ordinal, letters }
+}
+
 /** Turns text such as "John 3:16-18" into a verse range, or says what is wrong with it. */
 export function parseReference(input: string, books: readonly BookInfo[]): ParseResult {
   if (!input.trim()) return { ok: false, error: 'Type a verse, such as John 3:16.' }
-  const { ordinal, letters, words, rest: afterBook } = splitInput(input)
-  if (!letters) return { ok: false, error: 'Start with a book name, such as John 3:16 or Ps 23.' }
-
-  const { exact, names } = indexOf(books)
-  const k = bookKey(ordinal, letters)
-  let bi: number | undefined
-  let rest = afterBook
-  // Longest run of leading words that names a book ("Song of Solomon"); any words left over are reported as unreadable
-  // ("John banana" is John followed by something we can't read, not a book called johnbanana).
-  for (let n = words.length; n >= 1 && bi === undefined; n--) {
-    const hit = exact.get(bookKey(ordinal, words.slice(0, n).join('')))
-    if (hit !== undefined) {
-      bi = hit
-      rest = [...words.slice(n), afterBook].join(' ').trim()
-    }
+  const found = findBook(input, books)
+  if (found.kind === 'ambiguous') {
+    const some = found.hits.slice(0, 4).map((i) => books[i].name).join(', ')
+    return { ok: false, error: `“${input.trim()}” could be ${some}${found.hits.length > 4 ? ', …' : ''}. Add more letters.` }
   }
-  if (bi === undefined && letters.length >= 3) {
-    // A unique prefix of a full name works too ("revel", "phili"); several matches means we should ask.
-    const hits = names.flatMap((n, i) => (n.startsWith(k) ? [i] : []))
-    if (hits.length === 1) bi = hits[0]
-    else if (hits.length > 1) {
-      const some = hits.slice(0, 4).map((i) => books[i].name).join(', ')
-      return { ok: false, error: `“${input.trim()}” could be ${some}${hits.length > 4 ? ', …' : ''}. Add more letters.` }
-    }
-  }
-  if (bi === undefined) {
+  if (found.kind === 'unknown') {
+    if (!found.letters) return { ok: false, error: 'Start with a book name, such as John 3:16 or Ps 23.' }
     // Offer the closest books by the part we did recognise as a name (digits would otherwise hide every suggestion).
+    const { ordinal, letters } = found
     const guesses = suggestBooks((ordinal ? `${ordinal} ` : '') + letters, books, 4)
     return {
       ok: false,
@@ -186,6 +194,7 @@ export function parseReference(input: string, books: readonly BookInfo[]): Parse
         : `No book called “${(ordinal ? ordinal + ' ' : '') + letters}”.`,
     }
   }
+  const { bi, rest } = found
 
   const book = books[bi]
   const nChapters = book.chapters.length
@@ -283,4 +292,78 @@ export function suggestBooks(input: string, books: readonly BookInfo[], limit = 
   })
   for (const [alias, i] of exact) if (alias.startsWith(k)) push(i)
   return out.slice(0, limit).map((i) => books[i])
+}
+
+/** What to offer while a reference is being typed: books, then the chapters of the book, then the verses of the chapter. */
+export type Completion =
+  | { stage: 'none' }
+  | { stage: 'book'; books: BookInfo[] }
+  | { stage: 'chapter'; book: BookInfo; chapters: number[]; hint: string | null }
+  | { stage: 'verse'; book: BookInfo; chapter: number; verses: number[]; hint: string | null }
+
+const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1)
+
+/**
+ * Works out the next thing to suggest. Numbers typed so far narrow the list ("Ps 1" offers 1, 10-19, 100-150), a chapter
+ * that can only mean one thing moves on to its verses, and a number that does not exist ("Philippians 5") says so and
+ * offers the real ones instead of an empty list.
+ */
+export function completeReference(input: string, books: readonly BookInfo[]): Completion {
+  const bookStage = (): Completion => {
+    const found = suggestBooks(input, books)
+    return found.length ? { stage: 'book', books: found } : { stage: 'none' }
+  }
+  const found = findBook(input, books)
+  if (found.kind !== 'book') return bookStage()
+  const book = books[found.bi]
+  const spaced = /\s$/.test(input)
+  const rest = found.rest.replace(/\s+/g, ' ')
+  // Still typing the name itself ("john" suggests John, which then moves on to chapters).
+  if (rest === '' && !spaced) return bookStage()
+
+  const single = book.chapters.length === 1
+  const chaptersHint = `${book.name} has ${plural(book.chapters.length, 'chapter')}.`
+
+  const verseStage = (chapter: number, typed: string): Completion => {
+    const total = book.chapters[chapter - 1]
+    const all = range(total)
+    const matches = typed ? all.filter((v) => String(v).startsWith(typed)) : all
+    if (typed && matches.length === 0) {
+      return {
+        stage: 'verse',
+        book,
+        chapter,
+        verses: all,
+        hint: `${single ? book.name : `${book.name} ${chapter}`} has ${plural(total, 'verse')}.`,
+      }
+    }
+    return { stage: 'verse', book, chapter, verses: matches, hint: null }
+  }
+  const chapterStage = (typed: string): Completion => {
+    const all = range(book.chapters.length)
+    const matches = typed ? all.filter((c) => String(c).startsWith(typed)) : all
+    if (typed && matches.length === 0) return { stage: 'chapter', book, chapters: all, hint: chaptersHint }
+    // Only one chapter can be meant (and it is complete): go straight to its verses.
+    if (typed && matches.length === 1 && spaced) return verseStage(matches[0], '')
+    if (typed && matches.length === 1 && String(matches[0]) === typed) return verseStage(matches[0], '')
+    return { stage: 'chapter', book, chapters: matches, hint: null }
+  }
+
+  // A one-chapter book (Jude, Philemon...) has no chapter step: the numbers are verses.
+  if (single) {
+    if (rest === '') return verseStage(1, '')
+    const m = rest.match(/^(?:1\s*[:.]\s*)?(\d*)$/)
+    return m ? verseStage(1, m[1]) : { stage: 'none' }
+  }
+
+  if (rest === '') return chapterStage('')
+  let m = rest.match(/^(\d+)$/)
+  if (m) return chapterStage(m[1])
+  m = rest.match(/^(\d+)\s*[:.]\s*(\d*)$/) ?? rest.match(/^(\d+) (\d+)$/)
+  if (m) {
+    const chapter = Number(m[1])
+    if (chapter < 1 || chapter > book.chapters.length) return chapterStage(m[1])
+    return verseStage(chapter, m[2])
+  }
+  return { stage: 'none' }
 }
