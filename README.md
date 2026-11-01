@@ -1,5 +1,7 @@
 # Scripture Echoes
 
+**Live site: https://parkhilljosiah.github.io/bible-cross-reference/**
+
 An interactive arc diagram of Bible cross-references (React + TypeScript + Vite). Every arc joins two verses that
 cross-reference each other. Filter to book pairs such as Revelation ↔ Daniel & Ezekiel, switch to a hand-curated layer
 of quotations and allusions, pin a book, and read the linked passages side by side.
@@ -88,7 +90,8 @@ rest are added as new links.
 The build uses relative asset paths, so `dist/` works from the site root or any subfolder.
 
 - **GitHub Pages:** push to `main` with Pages set to *Settings → Pages → Source: GitHub Actions*. The workflow in
-  `.github/workflows/deploy.yml` lints, builds and publishes.
+  `.github/workflows/deploy.yml` lints, tests, builds and publishes (live at the link at the top). If a deploy needs another
+  try, use *Actions → Deploy → Run workflow*, not *Re-run failed jobs* (that uploads a second artifact and the deploy fails).
 - **Netlify / Vercel / Cloudflare Pages:** build command `npm run build`, output directory `dist`.
 
 ## Translations

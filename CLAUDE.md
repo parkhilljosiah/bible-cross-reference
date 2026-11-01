@@ -120,8 +120,9 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
 
 ## Deployment
 
-GitHub Pages via `.github/workflows/deploy.yml` (lint, build, upload, deploy on push to `main`; also manual
-`workflow_dispatch`). `vite.config.ts` uses `base: './'` so it works under `/bible-cross-reference/`.
+Live at **https://parkhilljosiah.github.io/bible-cross-reference/** (GitHub Pages via `.github/workflows/deploy.yml`: lint, test,
+build, upload, deploy on push to `main`; also manual `workflow_dispatch`). Every run since #2 has succeeded; pages are cached for a
+few minutes, so right after a deploy add a throwaway query (`?x=1`) to see the new build. `vite.config.ts` uses `base: './'` so it works under `/bible-cross-reference/`.
 
 - Pages must be enabled once: repo Settings -> Pages -> Source: **GitHub Actions**. (A 404 "Ensure GitHub Pages has
   been enabled" on deploy means this wasn't set.)
