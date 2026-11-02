@@ -103,6 +103,12 @@ The build uses relative asset paths, so `dist/` works from the site root or any 
   try, use *Actions → Deploy → Run workflow*, not *Re-run failed jobs* (that uploads a second artifact and the deploy fails).
 - **Netlify / Vercel / Cloudflare Pages:** build command `npm run build`, output directory `dist`.
 
+## Testing
+
+- `npm test` runs the automated tests (CI runs them before every deploy).
+- [`TESTING.md`](TESTING.md) is the **manual checklist to run after each deployment**: a 10-minute smoke test for every deploy, a full
+  pass for feature changes, and a data check, with the exact values to expect.
+
 ## Translations
 
 | ID | Translation | Notes |

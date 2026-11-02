@@ -15,6 +15,9 @@ npm run lint         # oxlint
 node scripts/build-data.mjs   # regenerate public/data (needs data/raw/, see below)
 ```
 
+Manual checklist for after each deploy: **`TESTING.md`**. **Keep it in sync**: when you add a feature or fix a bug, add a line for it
+there, and when the data is rebuilt update its numbers (golden links, counts). Tell the owner which lines you added.
+
 Tests: `npm test` runs `tests/*.test.ts` with Node's built-in runner (Node strips the types itself; no framework). They cover
 the reference parser only. For everything else verify with `npx tsc -b`, `npm run lint`, and the browser. CI runs lint, tests
 and build before deploying.
@@ -168,6 +171,14 @@ few minutes, so right after a deploy add a throwaway query (`?x=1`) to see the n
   are confirmed.
 - Possible: PWA manifest/Home Screen mode, a LICENSE file, tests for `graph.ts`/`urlState.ts`/the build script,
   top book *pairs* instead of single books in the phone list.
+
+## Known bug: KJV small-caps LORD missing in 205 verses
+
+`scripts/build-data.mjs` restores the KJV's small-caps LORD/GOD from the older `en_kjv.json`, but only for verses whose wording
+is identical in both sources. Where the two differ (mostly Psalms with the title inside verse 1, e.g. Ps 23:1 and 110:1, plus
+some in 1 Sam, Judg, 2 Kgs, Isa) the shipped KJV prints "Lord" instead of "LORD": 205 verses of ~5,600 with the divine name. A
+fix: match the LORD/GOD/Lord/God words in order between the two sources and copy the older source's capitalisation when the
+sequences agree. Found while preparing `TESTING.md`.
 
 ## On hold: copyrighted translations (ESV, NIV, NASB, NLT)
 
