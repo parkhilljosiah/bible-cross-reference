@@ -3,8 +3,10 @@
 Run this after a deployment. The automated checks (lint, 35 tests, build) already run in CI before anything deploys; this list
 covers what they can't: how the live site looks and feels on real browsers and phones.
 
-**How to use it:** copy the sections you need into a note or a GitHub issue ("Release check") and tick them off. If something
-fails, write down the device, browser, URL, steps, what you expected and what happened (see section 7).
+**How to use it:** on GitHub open **Issues → New issue** and pick a **Release check** template (smoke test, full pass, or data
+rebuilt). The checklist arrives as clickable checkboxes with the golden links as real links; tick them off as you go and close the
+issue when you're done, which leaves a history of every release. (Prefer a note? Copy the sections you need from here.) If
+something fails, write down the device, browser, URL, steps, what you expected and what happened (see section 7).
 
 | Pass | When | Time |
 | --- | --- | --- |
@@ -208,3 +210,7 @@ when sliding, on the first search) and roughly how long it takes.
 
 When a feature is added or a bug is fixed, add one line here for it (a bug that's been fixed once is the likeliest to come back).
 If the data is rebuilt, update the numbers.
+
+**After editing this file, run `npm run checklists`** and commit the regenerated files in `.github/ISSUE_TEMPLATE/`. The issue
+templates are generated from this file (sections 0 to 5 and the golden links), and `npm test` fails if they are out of date, so a
+forgotten step is caught before it deploys.

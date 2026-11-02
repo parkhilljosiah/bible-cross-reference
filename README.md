@@ -107,7 +107,8 @@ The build uses relative asset paths, so `dist/` works from the site root or any 
 
 - `npm test` runs the automated tests (CI runs them before every deploy).
 - [`TESTING.md`](TESTING.md) is the **manual checklist to run after each deployment**: a 10-minute smoke test for every deploy, a full
-  pass for feature changes, and a data check, with the exact values to expect.
+  pass for feature changes, and a data check, with the exact values to expect. On GitHub, *Issues → New issue → Release check* gives
+  it to you as clickable checkboxes. The templates are generated from `TESTING.md` with `npm run checklists` (a test keeps them in sync).
 
 ## Translations
 

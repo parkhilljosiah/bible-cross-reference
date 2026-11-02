@@ -16,7 +16,9 @@ node scripts/build-data.mjs   # regenerate public/data (needs data/raw/, see bel
 ```
 
 Manual checklist for after each deploy: **`TESTING.md`**. **Keep it in sync**: when you add a feature or fix a bug, add a line for it
-there, and when the data is rebuilt update its numbers (golden links, counts). Tell the owner which lines you added.
+there, and when the data is rebuilt update its numbers (golden links, counts). Tell the owner which lines you added. **After any edit
+to `TESTING.md` run `npm run checklists`**: it regenerates the GitHub issue templates in `.github/ISSUE_TEMPLATE/` (release-check-smoke,
+-full, -data) from it, and `npm test` fails if they are stale. Never hand-edit those templates.
 
 Tests: `npm test` runs `tests/*.test.ts` with Node's built-in runner (Node strips the types itself; no framework). They cover
 the reference parser only. For everything else verify with `npx tsc -b`, `npm run lint`, and the browser. CI runs lint, tests
