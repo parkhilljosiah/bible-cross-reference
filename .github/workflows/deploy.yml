@@ -6,6 +6,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      checklist:
+        description: Which release-check issue to open once the deploy succeeds
+        type: choice
+        options: [smoke, full, data]
+        default: smoke
 
 permissions:
   contents: read
@@ -37,3 +43,22 @@ jobs:
           path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # After a successful deploy, open a pre-filled checklist issue (scripts/create-release-issue.mjs decides whether one is needed).
+  release-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/create-release-issue.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKLIST_INPUT: ${{ inputs.checklist }}

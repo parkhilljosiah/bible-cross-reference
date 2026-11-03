@@ -140,6 +140,14 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
 
 ## Deployment
 
+**Release-check issues are opened automatically.** The `release-check` job in `deploy.yml` (needs the `deploy` job, so only after a
+success; `issues: write` permission; `fetch-depth: 2`) runs `scripts/create-release-issue.mjs`, which opens an issue from the template
+in `.github/ISSUE_TEMPLATE/`, pre-filled with the commit, run URL and a `?x=<sha>` link, labelled `release-check`. Smoke by default;
+`[full]` / `[data]` in the commit message pick the others (or the `checklist` input of a manual run); commits that touch only `*.md`,
+`tests/` or `.github/ISSUE_TEMPLATE/` are skipped (the site is unchanged) unless the message has `[issue]`; `[no-issue]` always skips;
+an issue for the same short SHA is never duplicated. The decisions are pure functions covered by `tests/releaseIssue.test.ts`; try
+`node scripts/create-release-issue.mjs --dry-run`. Not run in the real Actions environment until the first push after it was added.
+
 Live at **https://parkhilljosiah.github.io/bible-cross-reference/** (GitHub Pages via `.github/workflows/deploy.yml`: lint, test,
 build, upload, deploy on push to `main`; also manual `workflow_dispatch`). Every run since #2 has succeeded; pages are cached for a
 few minutes, so right after a deploy add a throwaway query (`?x=1`) to see the new build. `vite.config.ts` uses `base: './'` so it works under `/bible-cross-reference/`.

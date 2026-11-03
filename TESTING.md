@@ -3,10 +3,23 @@
 Run this after a deployment. The automated checks (lint, tests, build) already run in CI before anything deploys; this list
 covers what they can't: how the live site looks and feels on real browsers and phones.
 
-**How to use it:** on GitHub open **Issues → New issue** and pick a **Release check** template (smoke test, full pass, or data
-rebuilt). The checklist arrives as clickable checkboxes with the golden links as real links; tick them off as you go and close the
-issue when you're done, which leaves a history of every release. (Prefer a note? Copy the sections you need from here.) If
-something fails, write down the device, browser, URL, steps, what you expected and what happened (see section 7).
+**How to use it:** after each successful deploy the pipeline **opens a Release check issue for you** (Issues tab, label
+`release-check`). It's pre-filled with the commit, a link to the deploy run, and a link to the new build that bypasses the cache,
+followed by the checklist as clickable checkboxes and the golden links as real links. Tick them off as you go and close the issue when
+you're done, which leaves a history of every release. If something fails, write down the device, browser, URL, steps, what you
+expected and what happened (see section 7).
+
+Which issue you get is controlled from the commit message:
+
+| In the commit message | Effect |
+| --- | --- |
+| *(nothing)* | the **smoke test** is opened, unless only documentation or tests changed (then no issue: the site is the same) |
+| `[full]` or `[data]` | the full pass, or the data-rebuilt checklist, instead of the smoke test |
+| `[issue]` | open one even for a documentation-only change |
+| `[no-issue]` | don't open one |
+
+To get one on demand, run **Actions → Deploy → Run workflow** and choose the checklist, or open one by hand with **Issues → New issue →
+Release check**. (Prefer a note? Copy the sections you need from here.)
 
 | Pass | When | Time |
 | --- | --- | --- |
