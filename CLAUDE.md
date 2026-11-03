@@ -15,6 +15,10 @@ npm run lint         # oxlint
 node scripts/build-data.mjs   # regenerate public/data (needs data/raw/, see below)
 ```
 
+**Ideas for future work live in `ROADMAP.md`** (effort, what each builds on, decisions needed, and what's parked). When asked what to
+work on next, start there; when something ships, move it to "Shipped" and add its checks to `TESTING.md`; when a new idea comes up,
+add it. Tell the owner what you changed.
+
 Manual checklist for after each deploy: **`TESTING.md`**. **Keep it in sync**: when you add a feature or fix a bug, add a line for it
 there, and when the data is rebuilt update its numbers (golden links, counts). Tell the owner which lines you added. **After any edit
 to `TESTING.md` run `npm run checklists`**: it regenerates the GitHub issue templates in `.github/ISSUE_TEMPLATE/` (release-check-smoke,

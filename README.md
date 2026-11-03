@@ -103,6 +103,11 @@ The build uses relative asset paths, so `dist/` works from the site root or any 
   try, use *Actions → Deploy → Run workflow*, not *Re-run failed jobs* (that uploads a second artifact and the deploy fails).
 - **Netlify / Vercel / Cloudflare Pages:** build command `npm run build`, output directory `dist`.
 
+## Roadmap
+
+[`ROADMAP.md`](ROADMAP.md) lists ideas for future improvements (with effort, what each builds on, and what's waiting on a
+decision), so any of them can be picked up later.
+
 ## Testing
 
 - `npm test` runs the automated tests (CI runs them before every deploy).
