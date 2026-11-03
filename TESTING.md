@@ -1,6 +1,6 @@
 # Manual test checklist
 
-Run this after a deployment. The automated checks (lint, 35 tests, build) already run in CI before anything deploys; this list
+Run this after a deployment. The automated checks (lint, tests, build) already run in CI before anything deploys; this list
 covers what they can't: how the live site looks and feels on real browsers and phones.
 
 **How to use it:** on GitHub open **Issues → New issue** and pick a **Release check** template (smoke test, full pass, or data
@@ -21,7 +21,7 @@ Live site: `https://parkhilljosiah.github.io/bible-cross-reference/` (below, `/`
 ## Golden links
 
 Open each in a fresh tab. These are the fixed points the rest of the list refers to. The numbers come from the data as built on
-2026-11-02; if you rebuild the data, update them here (section 4).
+2026-11-02; if you rebuild the data, update them in `TESTING.md` (section 4).
 
 | Link | Should show |
 | --- | --- |
@@ -170,7 +170,7 @@ Only after rebuilding with `node scripts/build-data.mjs`.
 - [ ] 66 books on the strip; the Bible has 31,102 verses; the link total in the header is as expected.
 - [ ] "Curated allusions only (N)" shows the new count; open three curated links and check each shows a type and a note.
 - [ ] Open a passage in each of the seven translations (try Genesis 1:1 and Revelation 22:21).
-- [ ] **Update the numbers in this file** (golden links, counts, and the "Show more" figure).
+- [ ] **Update the numbers in `TESTING.md`** (golden links, counts, and the "Show more" figure), then run `npm run checklists`.
 
 ---
 

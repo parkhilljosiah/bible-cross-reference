@@ -16,7 +16,7 @@ Explanations and expected values: [TESTING.md](https://github.com/parkhilljosiah
 ## Golden links
 
 Open each in a fresh tab. These are the fixed points the rest of the list refers to. The numbers come from the data as built on
-2026-11-02; if you rebuild the data, update them here (section 4).
+2026-11-02; if you rebuild the data, update them in `TESTING.md` (section 4).
 
 | Link | Should show |
 | --- | --- |
