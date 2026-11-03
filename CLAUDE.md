@@ -51,7 +51,8 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
 - **Translations** come from scrollmapper/bible_databases (`formats/json/<ID>.json`): KJV, BSB, NHEB, ASV, YLT, Darby,
   Webster. Each is re-keyed to the KJV book/chapter/verse layout and written one file per book, fetched lazily when a
   passage is opened (`loadVerses` in `data.ts`). Verses a translation omits are stored as `''` and the UI says so.
-  The KJV's small-caps LORD is restored from the older `en_kjv.json` (the scrollmapper KJV flattens it to "Lord").
+  The KJV's small-caps LORD/GOD is restored from the older `en_kjv.json` by `scripts/divine-names.mjs` (the scrollmapper KJV flattens
+  it to "Lord"); see "KJV small-caps LORD" below.
   **OEB is unusable** (most verses empty in that dataset). WEB itself isn't in that repository; NHEB stands in.
   Selected translation lives in the URL (`tr`, `cmp`) and localStorage (`translation`).
 - `data/curated/allusions.txt`: `later | earlier | type | note`, one link per line. The build script fails loudly on a
@@ -174,13 +175,16 @@ few minutes, so right after a deploy add a throwaway query (`?x=1`) to see the n
 - Possible: PWA manifest/Home Screen mode, a LICENSE file, tests for `graph.ts`/`urlState.ts`/the build script,
   top book *pairs* instead of single books in the phone list.
 
-## Known bug: KJV small-caps LORD missing in 205 verses
+## KJV small-caps LORD (fixed; 3 verses remain)
 
-`scripts/build-data.mjs` restores the KJV's small-caps LORD/GOD from the older `en_kjv.json`, but only for verses whose wording
-is identical in both sources. Where the two differ (mostly Psalms with the title inside verse 1, e.g. Ps 23:1 and 110:1, plus
-some in 1 Sam, Judg, 2 Kgs, Isa) the shipped KJV prints "Lord" instead of "LORD": 205 verses of ~5,600 with the divine name. A
-fix: match the LORD/GOD/Lord/God words in order between the two sources and copy the older source's capitalisation when the
-sequences agree. Found while preparing `TESTING.md`.
+The KJV prints the Hebrew name YHWH as small-caps LORD (and "Lord GOD"); the scrollmapper text writes everything as "Lord"/"God".
+`restoreDivineNames(verse, original)` in `scripts/divine-names.mjs` copies the capitalisation of the Lord/God words from the older
+`en_kjv.json` onto each verse **only when the verse's sequence of those words matches the start of the original's** (the older source
+appends margin notes after a verse, whose extra words are ignored). It changes nothing but the capitalisation, and guesses nothing
+when the words don't line up. History: the first version only fixed verses whose wording was identical in both sources and missed 205
+(mostly Psalms with the title inside verse 1, e.g. Ps 23:1 and 110:1), found while writing `TESTING.md`; the current rule leaves **3**
+(Ps 7:1, 18:1, 102:1: their titles contain "the LORD" and exist only in the shipped text, so there is nothing to copy from). Covered by
+`tests/divineNames.test.ts`. The rebuild changed only KJV files, and only Lord/God capitalisation (checked by diffing before and after).
 
 ## On hold: copyrighted translations (ESV, NIV, NASB, NLT)
 

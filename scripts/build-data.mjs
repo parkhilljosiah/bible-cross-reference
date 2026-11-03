@@ -5,6 +5,7 @@
 //   translations.json – manifest of the bundled public-domain translations
 //   text/<ID>/<Book>.json – one array of verse strings per book, aligned to the KJV chapter/verse layout
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
+import { restoreDivineNames } from './divine-names.mjs'
 
 // [OpenBible abbreviation, display name, genre]
 const BOOKS = [
@@ -194,11 +195,9 @@ rmSync('public/data/kjv.json', { force: true })
 rmSync('public/data/text', { recursive: true, force: true })
 const norm = (t) => t.replace(/\s+/g, ' ').trim()
 
-// The scrollmapper KJV writes every divine name as "Lord" / "God". The KJV prints the Hebrew name YHWH as small-caps
-// LORD (and "Lord GOD"), which matters to careful readers. When the older en_kjv.json is present, take its capitalization
-// for every verse whose words are otherwise identical.
+// The scrollmapper KJV writes every divine name as "Lord" / "God", but the KJV prints the Hebrew name YHWH as small-caps LORD (and
+// "Lord GOD"). When the older en_kjv.json is present, copy its capitalization of those words onto each verse (see divine-names.mjs).
 const tidy = (t) => norm(t.replace(/\{[^}]*\}/g, '').replace(/\s+([,.;:!?])/g, '$1'))
-const flatten = (t) => tidy(t).replace(/\bLORD\b/g, 'Lord').replace(/\bGOD\b/g, 'God')
 let divineNames = null
 try {
   const old = JSON.parse(readFileSync('data/raw/en_kjv.json', 'utf8').replace(/^\uFEFF/, ''))
@@ -228,9 +227,9 @@ for (const t of TRANSLATIONS) {
     })
     if (t.id === 'KJV' && divineNames) {
       arr.forEach((verse, i) => {
-        const original = divineNames[bi][i]
-        if (original && original !== verse && flatten(original) === verse) {
-          arr[i] = original
+        const fixed = restoreDivineNames(verse, divineNames[bi][i] ?? '')
+        if (fixed !== verse) {
+          arr[i] = fixed
           restored++
         }
       })

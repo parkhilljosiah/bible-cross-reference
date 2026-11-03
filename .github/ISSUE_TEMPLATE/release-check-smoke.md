@@ -77,9 +77,9 @@ On a real phone, portrait. Do iPhone Safari at least; add Android Chrome when yo
 - **The first word search per translation** downloads about 1.25 MB; the site doesn't keep it between visits for long (pages are cached 10 minutes).
 - **Right after a deploy** you may see the old version for a few minutes; use `?x=1`.
 - **iOS Safari's back-swipe** can still take over a drag that begins in the first ~20 px of the screen edge.
-- **KJV "Lord" instead of "LORD" in 205 verses.** The KJV prints the divine name in small capitals (LORD, GOD). About 5,400 verses
-  are right, but 205 are not, mostly Psalms whose title is part of verse 1 (e.g. Psalm 23:1 and 110:1) and some in 1 Samuel, Judges,
-  2 Kings and Isaiah. This is a known data bug, not a regression; remove this line when it's fixed.
+- **KJV "Lord" instead of "LORD" in 3 verses** (Psalm 7:1, 18:1 and 102:1). The older text used to restore the small capitals doesn't
+  include these psalms' titles, so their capitalization can't be restored safely. All other divine-name verses are right. Remove this
+  line if they are ever fixed.
 - **Copyrighted translations** (ESV, NIV, NASB, NLT) aren't available; that work is on hold pending licensing.
 - **The curated allusion list** is a starter set pending expert review, not an authoritative list.
 
