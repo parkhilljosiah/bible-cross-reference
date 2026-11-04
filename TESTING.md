@@ -65,6 +65,9 @@ Open each in a fresh tab. These are the fixed points the rest of the list refers
 Use a wide window (over 900 px) so you get the two-column layout. Chrome first.
 
 - [ ] **Loads:** `/` shows the arc diagram, the book strip with labels, and the right-hand panel. Header says **133,357 of 301,559 links**.
+- [ ] **Welcome window:** open `/` in a private window (a first visit). A "Welcome to Scripture Echoes" window opens with four steps.
+      Click **Try John 3:16**: the window closes and John 3:16 is selected. Reload: it does not come back. Click the **?** button
+      (or press `?`): it reopens, and **Esc** closes it.
 - [ ] **Select a book:** click Psalms on the strip. Arcs light up in several colors (not a white blob). The panel shows "Psalms",
       a link count, "Most connected books" and "Strongest links".
 - [ ] **Hover does nothing heavy:** move the mouse across the strip. A white box and a name tooltip follow; no arcs are redrawn.
@@ -83,6 +86,9 @@ On a real phone, portrait. Do iPhone Safari at least; add Android Chrome when yo
 
 - [ ] **Layout:** header (title, count, Filters), search box with **Go**, a row of book chips that scrolls sideways, the diagram,
       and the "Top connected books" list under it. Nothing cut off; the page doesn't scroll sideways.
+- [ ] **Welcome window:** in a private tab, the welcome window opens showing its title at the top, scrolls to the end, and its buttons
+      are easy to tap. **Start exploring** closes it. The **?** button is visible in the header, with Filters, without the page
+      scrolling sideways.
 - [ ] **Slide to select:** put a finger on the book strip, slide along it, lift on a book. While sliding you see a box and
       "Lift to select"; on lifting the book is selected and the sheet opens.
 - [ ] **Start at the far left** of the strip (Genesis). The page must not slide away (iOS Safari's back-swipe starts within about
@@ -150,6 +156,8 @@ On a real phone, portrait. Do iPhone Safari at least; add Android Chrome when yo
 ### 3.6 Links and the address bar
 - [ ] The address updates as you select, filter, switch translation, and search. Copy it into a new tab: the same view returns.
 - [ ] Each parameter round-trips: `between`, `and`, `votes`, `zoom`, `src`, `sel`, `tr`, `cmp`, `q`, `qm`.
+- [ ] A shared address (any of the above, for example `/?sel=John.3.16`) opens straight to its content with no welcome window, even in a
+      private window. Opening the plain address afterwards in that same window still shows the welcome.
 - [ ] A made-up or broken address (`/?sel=Foo.1.1&tr=XYZ&votes=banana`) opens the normal page without errors.
 
 ### 3.7 Phone extras

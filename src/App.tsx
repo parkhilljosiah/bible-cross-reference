@@ -4,12 +4,15 @@ import BookChips from './BookChips'
 import Controls from './Controls'
 import Sidebar from './Sidebar'
 import TextResults from './TextResults'
+import Welcome from './Welcome'
 import { loadData, type Data } from './data'
 import { DEFAULT_TRANSLATION, readState, writeState } from './urlState'
 import { buildContext, DEFAULT_FILTERS, type Filters, type Selection } from './graph'
 import type { SearchMode } from './textSearch'
 import { MOBILE_QUERY, useMediaQuery } from './useMediaQuery'
 import { useTextSearch } from './useTextSearch'
+import { shouldShowWelcome } from './welcomeRule'
+import { parseReference } from './reference'
 import './App.css'
 
 export default function App() {
@@ -24,6 +27,14 @@ export default function App() {
   // A word or phrase being searched for in the text, and how several words are matched.
   const [query, setQuery] = useState<string | null>(null)
   const [queryMode, setQueryMode] = useState<SearchMode>('phrase')
+  // First-time visitors on the plain site get the how-to window once; shared links go straight to their content.
+  const [welcome, setWelcome] = useState(() => {
+    try {
+      return shouldShowWelcome(window.location.search, window.localStorage.getItem('welcomeSeen') === '1')
+    } catch {
+      return shouldShowWelcome(window.location.search, false) // storage unavailable: treat as a new visitor
+    }
+  })
   const mobile = useMediaQuery(MOBILE_QUERY)
 
   useEffect(() => {
@@ -51,6 +62,28 @@ export default function App() {
       },
       (e) => setError(String(e)),
     )
+  }, [])
+
+  // Remember that the window has been shown, so it greets each browser only once.
+  useEffect(() => {
+    if (!welcome) return
+    try {
+      window.localStorage.setItem('welcomeSeen', '1')
+    } catch {
+      /* it may show again next visit */
+    }
+  }, [welcome])
+
+  // "?" opens the how-to window from anywhere outside a text field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.metaKey || e.ctrlKey || e.altKey) return
+      if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return
+      e.preventDefault()
+      setWelcome(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   // Keep the address bar in sync so the current view can always be copied or shared.
@@ -102,6 +135,26 @@ export default function App() {
     }
   }
 
+  const bookIndex = (name: string) => data.books.findIndex((b) => b.name === name)
+  const welcomeActions = {
+    openBook: (name: string) => {
+      const b = data.books[bookIndex(name)]
+      if (b) search({ lo: b.start, hi: b.start + b.count - 1 })
+    },
+    openVerse: (reference: string) => {
+      const r = parseReference(reference, data.books)
+      if (r.ok) search({ lo: r.lo, hi: r.hi })
+    },
+    searchText: startTextSearch,
+    compareBooks: (a: string, b: string) => {
+      const i = bookIndex(a)
+      const j = bookIndex(b)
+      if (i < 0 || j < 0) return
+      pin(null)
+      setFilters((f) => ({ ...f, between: [i], and: [j], zoom: true }))
+    },
+  }
+
   return (
     <div className="app">
       <Controls
@@ -111,6 +164,7 @@ export default function App() {
         shown={ctx.links.length}
         onSearch={search}
         onTextSearch={startTextSearch}
+        onHelp={() => setWelcome(true)}
       />
       <main>
         {mobile && <BookChips data={data} ctx={ctx} pinned={pinned} onPin={pin} />}
@@ -158,6 +212,7 @@ export default function App() {
           }}
         />
       </main>
+      {welcome && <Welcome onClose={() => setWelcome(false)} {...welcomeActions} />}
     </div>
   )
 }

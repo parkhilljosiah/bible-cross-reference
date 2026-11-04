@@ -128,6 +128,11 @@ Data model: verses are indexed 0..31101 globally. A link is `a[i] < b[i]` with `
   `ArcCanvas`, a light direct canvas, not the worker). Results show in the same fixed-height area as the selection sheet, so the
   diagram never resizes; picking a result selects the verse and the header button becomes "← Results". Not done: wildcards,
   searching two translations at once, remembering the results scroll position when coming back from a verse.
+- **Welcome window** (`Welcome.tsx`, rule in `welcomeRule.ts`, tested): a native `<dialog>` opened with `showModal()` on a first visit
+  (`localStorage.welcomeSeen`, written in an effect; the state initializer stays pure because React dev runs it twice). Not shown when
+  the address carries a view (`sel`, `q`, `between`...: someone followed a shared link), and that visit does not mark it seen. Reopen
+  with the header **?** button or the `?` key. Each step's "Try it" closes the window and acts through `App`'s `welcomeActions`. The
+  file is `welcomeRule.ts` because `welcome.ts` and `Welcome.tsx` collide on case-insensitive filesystems (macOS).
 - **Rasterizer is cheap per render:** one reused accumulation buffer, a fixed ~20k-pixel exposure sample, and the result is
   only the band of rows the arcs touched (`top`/`height`/`fullHeight`). Markers are DOM, not canvas, so they never wait for
   the worker.

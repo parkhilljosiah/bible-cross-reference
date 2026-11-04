@@ -251,7 +251,7 @@ export default function Sidebar({
         </section>
       )}
 
-      <section>
+      <section className="strongest">
         <h3>Strongest links</h3>
         <ul className="links">
           {shownLinks.map((e) => {

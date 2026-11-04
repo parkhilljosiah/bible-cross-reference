@@ -10,9 +10,10 @@ interface Props {
   shown: number
   onSearch: (sel: Selection) => void
   onTextSearch: (text: string) => void
+  onHelp: () => void
 }
 
-export default function Controls({ data, filters, onChange, shown, onSearch, onTextSearch }: Props) {
+export default function Controls({ data, filters, onChange, shown, onSearch, onTextSearch, onHelp }: Props) {
   // Only meaningful on small screens, where the filter fields collapse behind a button.
   const [open, setOpen] = useState(false)
   const active = filters.between.length > 0 || filters.and.length > 0
@@ -55,6 +56,9 @@ export default function Controls({ data, filters, onChange, shown, onSearch, onT
           onClick={() => setOpen(!open)}
         >
           Filters{chosen > 0 ? ` (${chosen})` : ''}
+        </button>
+        <button className="help-btn" aria-label="How to use this app" title="How to use this app (?)" onClick={onHelp}>
+          ?
         </button>
       </div>
 

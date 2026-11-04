@@ -1,7 +1,7 @@
 # Roadmap: ideas for improving Scripture Echoes
 
 A parking place for enhancements, so we can pick one up later without starting from scratch. Nothing here is committed to; the
-order is a recommendation. Last updated: 2026-11-02.
+order is a recommendation. Last updated: 2026-11-03.
 
 **Effort** is relative to what's already built: **S** = a few hours, **M** = a day or two, **L** = bigger. **Status:** Idea, Scoped
 (thought through, ready to build), In progress, Done.
@@ -14,10 +14,9 @@ order is a recommendation. Last updated: 2026-11-02.
 ## Suggested order
 
 1. **Browser Back button works** (S)
-2. **About / Help page** (S)
-3. **Automated golden-link tests** (M)
-4. **Installable and offline** (M)
-5. **Shared-word highlighting in linked passages** (M)
+2. **Automated golden-link tests** (M)
+3. **Installable and offline** (M)
+4. **Shared-word highlighting in linked passages** (M)
 
 Then, as interest and review allow: chapter heat map, suggested echoes, chapter reader, saved views, accessibility pass.
 
@@ -92,10 +91,10 @@ on the strip, a live-region sentence describing the selection, and a light theme
 
 | Idea | What it adds | Effort | Status |
 | --- | --- | --- | --- |
-| **About / Help page** | Data sources and licenses, how to read the diagram, what "votes" mean, shortcuts, known limits. | S | Idea |
+| **About page** | Data sources and licenses, what "votes" mean, known limits. (The how-to window already ships; this is the fuller reference.) | S | Idea |
 | **Privacy-friendly usage counts** | See which features people use. | S–M | Needs owner |
 
-**About / Help.** Mostly content that already exists in the README and `TESTING.md` section 5. Do this before promoting the site.
+**About.** Mostly content that already exists in the README and `TESTING.md` section 5. Do this before promoting the site.
 
 **Usage counts.** Choose a cookie-free service (e.g. GoatCounter, Plausible or Cloudflare Web Analytics) and say so on the About page.
 Decision: do you want any tracking at all?
@@ -141,6 +140,6 @@ Measured numbers are in `CLAUDE.md` ("Text-search performance"). In rough order 
 
 ## Shipped (for context)
 
-Arc diagram with filters and zoom/pan; click and slide-to-select; curated allusions; seven public-domain translations with compare; verse
+How-to window for first-time visitors (reopen with ? or the ? button; skipped on shared links); arc diagram with filters and zoom/pan; click and slide-to-select; curated allusions; seven public-domain translations with compare; verse
 search with book, chapter and verse suggestions and typo help; word and phrase search; shareable links; phone layout with a bottom
 sheet; manual test checklist with release-check issues opened automatically after each deploy; KJV small-caps LORD restored.
